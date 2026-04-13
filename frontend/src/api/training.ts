@@ -42,4 +42,9 @@ export const trainingApi = {
     api.get<CheckpointInfo[]>(`/training/checkpoints/${projectId}`).then((r) => r.data),
 
   pretrained: () => api.get<CheckpointInfo[]>('/training/pretrained').then((r) => r.data),
+
+  resume: (projectId: string, checkpointPath: string, datasetId: string, maxEpochs = 10000, batchSize = 1, precision = '32') =>
+    api.post('/training/resume', null, {
+      params: { project_id: projectId, checkpoint_path: checkpointPath, dataset_id: datasetId, max_epochs: maxEpochs, batch_size: batchSize, precision },
+    }).then((r) => r.data),
 }

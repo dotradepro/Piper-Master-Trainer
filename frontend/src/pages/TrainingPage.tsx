@@ -108,6 +108,29 @@ export function TrainingPage() {
     }
   }
 
+  const handleResume = async (checkpointPath: string) => {
+    if (!projectId || !selectedDataset) {
+      toast.error('Спочатку оберіть датасет')
+      return
+    }
+    setStarting(true)
+    setError(null)
+    setMetricsHistory([])
+    try {
+      await trainingApi.resume(projectId, checkpointPath, selectedDataset, maxEpochs, batchSize, precision)
+      const st = await trainingApi.status()
+      setStatus(st)
+      startPolling()
+      toast.success('Тренування відновлено з checkpoint')
+    } catch (e: any) {
+      const msg = e.response?.data?.detail || 'Помилка відновлення'
+      setError(msg)
+      toast.error(msg)
+    } finally {
+      setStarting(false)
+    }
+  }
+
   const handleStop = async () => {
     try {
       await trainingApi.stop()
@@ -323,7 +346,7 @@ export function TrainingPage() {
                           <td className="font-monospace small">{ckpt.filename}</td>
                           <td className="text-end small text-muted">{ckpt.size_mb.toFixed(1)} MB</td>
                           <td className="text-end">
-                            <Button variant="outline-secondary" size="sm">
+                            <Button variant="outline-secondary" size="sm" onClick={() => handleResume(ckpt.path)} disabled={isActive || starting}>
                               <RotateCcw size={12} className="me-1" /> Продовжити
                             </Button>
                           </td>
