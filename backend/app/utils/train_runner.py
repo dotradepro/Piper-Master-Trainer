@@ -25,7 +25,7 @@ def main():
         sys.exit(1)
 
     # Import piper training components
-    from piper.train.__main__ import TrainingCLI
+    from piper.train.__main__ import VitsLightningCLI
     from app.utils.training_callback import MetricsFileCallback
 
     # Inject callback into sys.argv for LightningCLI
@@ -48,7 +48,7 @@ def main():
     pl.Trainer.__init__ = patched_init
 
     try:
-        TrainingCLI()
+        VitsLightningCLI()
     finally:
         pl.Trainer.__init__ = original_init
 
