@@ -6,7 +6,7 @@ export function getTheme(): 'light' | 'dark' {
 
 export function setTheme(mode: 'light' | 'dark') {
   localStorage.setItem('theme', mode)
-  document.documentElement.classList.toggle('dark', mode === 'dark')
+  document.documentElement.setAttribute('data-bs-theme', mode)
 }
 
 export function toggleTheme() {

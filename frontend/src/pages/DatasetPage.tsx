@@ -4,11 +4,7 @@ import { datasetsApi } from '@/api/datasets'
 import type { DatasetInfo, DatasetStats, ValidationIssue, CsvRow } from '@/api/datasets'
 import { formatDuration } from '@/lib/utils'
 import { Database, Loader2, BarChart3 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Progress } from '@/components/ui/progress'
+import { Card, Button, Form, Table, Badge, Row, Col, ProgressBar, Spinner, Alert } from 'react-bootstrap'
 import { toast } from 'sonner'
 
 export function DatasetPage() {
@@ -77,196 +73,222 @@ export function DatasetPage() {
     }
   }
 
-  const severityVariant = (level: string): 'success' | 'warning' | 'destructive' | 'info' => {
+  const severityBg = (level: string): string => {
     switch (level) {
       case 'success': return 'success'
       case 'warning': return 'warning'
-      case 'error': return 'destructive'
+      case 'error': return 'danger'
       default: return 'info'
     }
   }
 
   if (loading) {
     return (
-      <div className="text-center py-16 text-[hsl(var(--muted-foreground))]">
-        <div className="w-8 h-8 border-2 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-        Завантаження...
+      <div className="text-center py-5 text-muted">
+        <Spinner className="mb-3" />
+        <div>Завантаження...</div>
       </div>
     )
   }
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
+      <div className="d-flex align-items-center gap-2 mb-4">
         <Database size={20} />
         <div>
-          <h1 className="text-lg font-semibold">Датасет</h1>
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">Підготовка навчального датасету для Piper</p>
+          <h1 className="h5 mb-0 fw-semibold">Датасет</h1>
+          <p className="text-muted small mb-0">Підготовка навчального датасету для Piper</p>
         </div>
       </div>
 
       {/* Prepare Controls */}
-      <Card className="mb-4">
-        <CardHeader className="px-4 py-3">
-          <CardTitle className="text-sm">Параметри підготовки</CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 items-end">
-            <div>
-              <label>Мін. тривалість (с)</label>
-              <input
-                type="number"
-                value={minDur}
-                onChange={(e) => setMinDur(+e.target.value)}
-                step={0.5}
-                min={0.5}
-                max={10}
-              />
-            </div>
-            <div>
-              <label>Макс. тривалість (с)</label>
-              <input
-                type="number"
-                value={maxDur}
-                onChange={(e) => setMaxDur(+e.target.value)}
-                step={1}
-                min={2}
-                max={30}
-              />
-            </div>
-            <div>
-              <label>Sample Rate</label>
-              <select
-                value={sampleRate}
-                onChange={(e) => setSampleRate(+e.target.value)}
-              >
-                <option value={22050}>22050 Hz</option>
-                <option value={16000}>16000 Hz</option>
-              </select>
-            </div>
-            <div className="flex justify-end">
-              <Button onClick={handlePrepare} disabled={preparing}>
-                {preparing ? <><Loader2 size={14} className="animate-spin" /> Підготовка...</> : <><Database size={14} /> Підготувати датасет</>}
+      <Card className="mb-3">
+        <Card.Header className="py-2">
+          <span className="small fw-semibold">Параметри підготовки</span>
+        </Card.Header>
+        <Card.Body>
+          <Row className="g-3 align-items-end">
+            <Col xs={6} md={3}>
+              <Form.Group>
+                <Form.Label>Мін. тривалість (с)</Form.Label>
+                <Form.Control
+                  type="number"
+                  value={minDur}
+                  onChange={(e) => setMinDur(+e.target.value)}
+                  step={0.5}
+                  min={0.5}
+                  max={10}
+                />
+              </Form.Group>
+            </Col>
+            <Col xs={6} md={3}>
+              <Form.Group>
+                <Form.Label>Макс. тривалість (с)</Form.Label>
+                <Form.Control
+                  type="number"
+                  value={maxDur}
+                  onChange={(e) => setMaxDur(+e.target.value)}
+                  step={1}
+                  min={2}
+                  max={30}
+                />
+              </Form.Group>
+            </Col>
+            <Col xs={6} md={3}>
+              <Form.Group>
+                <Form.Label>Sample Rate</Form.Label>
+                <Form.Select
+                  value={sampleRate}
+                  onChange={(e) => setSampleRate(+e.target.value)}
+                >
+                  <option value={22050}>22050 Hz</option>
+                  <option value={16000}>16000 Hz</option>
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col xs={6} md={3} className="text-end">
+              <Button variant="primary" onClick={handlePrepare} disabled={preparing}>
+                {preparing ? (
+                  <>
+                    <Loader2 size={14} className="me-1 spinner-rotate" />
+                    Підготовка...
+                  </>
+                ) : (
+                  <>
+                    <Database size={14} className="me-1" />
+                    Підготувати датасет
+                  </>
+                )}
               </Button>
-            </div>
-          </div>
+            </Col>
+          </Row>
           {preparing && prepareProgress > 0 && (
-            <Progress value={prepareProgress} className="mt-3" />
+            <ProgressBar now={prepareProgress} animated striped className="mt-3" style={{ height: 6 }} />
           )}
-        </CardContent>
+        </Card.Body>
       </Card>
 
       {error && (
-        <div className="rounded-md border border-[hsl(var(--destructive))] bg-[hsl(var(--destructive))]/10 p-3 mb-4 text-sm text-[hsl(var(--destructive))] flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--destructive))]" />{error}
-        </div>
+        <Alert variant="danger" className="mb-3">{error}</Alert>
       )}
 
       {/* Stats + Validation */}
       {stats && (
-        <div className="grid gap-4 md:grid-cols-2 mb-4">
-          <Card>
-            <CardHeader className="px-4 py-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <BarChart3 size={14} />
-                Статистика
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="bg-[hsl(var(--muted))] rounded-md p-3 text-center">
-                  <div className="text-lg font-bold">{stats.total_segments}</div>
-                  <div className="text-xs text-[hsl(var(--muted-foreground))]">Сегментів</div>
-                </div>
-                <div className="bg-[hsl(var(--muted))] rounded-md p-3 text-center">
-                  <div className="text-lg font-bold">{formatDuration(stats.total_duration_sec)}</div>
-                  <div className="text-xs text-[hsl(var(--muted-foreground))]">Тривалість</div>
-                </div>
-                <div className="bg-[hsl(var(--muted))] rounded-md p-3 text-center">
-                  <div className="text-lg font-bold">{stats.avg_duration_sec.toFixed(1)}с</div>
-                  <div className="text-xs text-[hsl(var(--muted-foreground))]">Середня</div>
-                </div>
-                <div className="bg-[hsl(var(--muted))] rounded-md p-3 text-center">
-                  <div className="text-lg font-bold">{stats.min_duration_sec.toFixed(1)} / {stats.max_duration_sec.toFixed(1)}с</div>
-                  <div className="text-xs text-[hsl(var(--muted-foreground))]">Мін / Макс</div>
-                </div>
-              </div>
-              {/* Histogram */}
-              {stats.duration_histogram.length > 0 && (
-                <div className="mt-4">
-                  <div className="text-xs text-[hsl(var(--muted-foreground))] mb-2">Розподіл тривалості</div>
-                  <div className="flex items-end gap-0.5 h-14 p-2 rounded-md bg-[hsl(var(--muted))]">
-                    {stats.duration_histogram.map((b, i) => {
-                      const maxCount = Math.max(...stats.duration_histogram.map((x) => x.count))
-                      const h = maxCount > 0 ? (b.count / maxCount) * 100 : 0
-                      return (
-                        <div key={i} className="flex-1 flex flex-col items-center">
-                          <div
-                            className="w-full bg-[hsl(var(--foreground))] rounded-t"
-                            style={{ height: `${h}%`, minHeight: b.count > 0 ? 2 : 0 }}
-                            title={`${b.min}-${b.max}с: ${b.count}`}
-                          />
-                        </div>
-                      )
-                    })}
+        <Row className="g-3 mb-3">
+          <Col md={6}>
+            <Card className="h-100">
+              <Card.Header className="py-2">
+                <span className="small fw-semibold d-flex align-items-center gap-2">
+                  <BarChart3 size={14} />
+                  Статистика
+                </span>
+              </Card.Header>
+              <Card.Body>
+                <Row xs={2} md={4} className="g-2">
+                  <Col>
+                    <div className="bg-light rounded p-2 text-center">
+                      <div className="fs-5 fw-bold">{stats.total_segments}</div>
+                      <div className="text-muted small">Сегментів</div>
+                    </div>
+                  </Col>
+                  <Col>
+                    <div className="bg-light rounded p-2 text-center">
+                      <div className="fs-5 fw-bold">{formatDuration(stats.total_duration_sec)}</div>
+                      <div className="text-muted small">Тривалість</div>
+                    </div>
+                  </Col>
+                  <Col>
+                    <div className="bg-light rounded p-2 text-center">
+                      <div className="fs-5 fw-bold">{stats.avg_duration_sec.toFixed(1)}с</div>
+                      <div className="text-muted small">Середня</div>
+                    </div>
+                  </Col>
+                  <Col>
+                    <div className="bg-light rounded p-2 text-center">
+                      <div className="fs-5 fw-bold">{stats.min_duration_sec.toFixed(1)} / {stats.max_duration_sec.toFixed(1)}с</div>
+                      <div className="text-muted small">Мін / Макс</div>
+                    </div>
+                  </Col>
+                </Row>
+                {/* Histogram */}
+                {stats.duration_histogram.length > 0 && (
+                  <div className="mt-3">
+                    <div className="text-muted small mb-2">Розподіл тривалості</div>
+                    <div className="d-flex align-items-end gap-1 bg-light rounded p-2" style={{ height: 70 }}>
+                      {stats.duration_histogram.map((b, i) => {
+                        const maxCount = Math.max(...stats.duration_histogram.map((x) => x.count))
+                        const h = maxCount > 0 ? (b.count / maxCount) * 100 : 0
+                        return (
+                          <div key={i} className="flex-grow-1 d-flex flex-column align-items-center">
+                            <div
+                              className="w-100 bg-dark rounded-top"
+                              style={{ height: `${h}%`, minHeight: b.count > 0 ? 2 : 0 }}
+                              title={`${b.min}-${b.max}с: ${b.count}`}
+                            />
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="d-flex justify-content-between text-muted small mt-1">
+                      <span>{stats.duration_histogram[0]?.min}с</span>
+                      <span>{stats.duration_histogram[stats.duration_histogram.length - 1]?.max}с</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-xs text-[hsl(var(--muted-foreground))] mt-1">
-                    <span>{stats.duration_histogram[0]?.min}с</span>
-                    <span>{stats.duration_histogram[stats.duration_histogram.length - 1]?.max}с</span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                )}
+              </Card.Body>
+            </Card>
+          </Col>
 
-          <Card>
-            <CardHeader className="px-4 py-3">
-              <CardTitle className="text-sm">Валідація</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <div className="space-y-2.5">
-                {issues.map((issue, i) => (
-                  <div key={i} className="flex items-start gap-2.5 text-sm p-2.5 rounded-md bg-[hsl(var(--muted))]">
-                    <Badge variant={severityVariant(issue.level)} className="mt-0.5 shrink-0">
-                      {issue.level}
-                    </Badge>
-                    <span>{issue.message}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+          <Col md={6}>
+            <Card className="h-100">
+              <Card.Header className="py-2">
+                <span className="small fw-semibold">Валідація</span>
+              </Card.Header>
+              <Card.Body>
+                <div className="list-group list-group-flush">
+                  {issues.map((issue, i) => (
+                    <div key={i} className="list-group-item d-flex align-items-start gap-2 px-0">
+                      <Badge bg={severityBg(issue.level)} className="mt-1">
+                        {issue.level}
+                      </Badge>
+                      <span className="small">{issue.message}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
       )}
 
       {/* CSV Preview */}
       {preview.length > 0 && (
-        <Card className="overflow-hidden">
-          <CardHeader className="px-4 py-3">
-            <CardTitle className="text-sm">
-              metadata.csv <span className="text-[hsl(var(--muted-foreground))] font-normal">({previewTotal} записів)</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="max-h-[50vh] overflow-y-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-[hsl(var(--muted))] sticky top-0">
+        <Card>
+          <Card.Header className="py-2">
+            <span className="small fw-semibold">
+              metadata.csv <span className="text-muted fw-normal">({previewTotal} записів)</span>
+            </span>
+          </Card.Header>
+          <Card.Body className="p-0">
+            <div style={{ maxHeight: '50vh', overflowY: 'auto' }}>
+              <Table hover size="sm" className="mb-0">
+                <thead className="sticky-top bg-light">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] w-32">Файл</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-[hsl(var(--muted-foreground))]">Текст</th>
+                    <th style={{ width: 130 }}>Файл</th>
+                    <th>Текст</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[hsl(var(--border))]">
+                <tbody>
                   {preview.map((row, i) => (
-                    <tr key={i} className="hover:bg-[hsl(var(--muted))] transition-colors">
-                      <td className="px-4 py-2 text-xs font-mono text-[hsl(var(--muted-foreground))]">{row.filename}</td>
-                      <td className="px-4 py-2">{row.text}</td>
+                    <tr key={i}>
+                      <td className="text-muted small font-monospace">{row.filename}</td>
+                      <td>{row.text}</td>
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </Table>
             </div>
-          </CardContent>
+          </Card.Body>
         </Card>
       )}
     </div>

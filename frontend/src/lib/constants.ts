@@ -1,6 +1,6 @@
 export const API_BASE = '/api'
 
-export const PROJECT_STATUSES: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' }> = {
+export const PROJECT_STATUSES: Record<string, { label: string; variant: string }> = {
   created: { label: 'Створено', variant: 'secondary' },
   downloading: { label: 'Завантаження', variant: 'info' },
   transcribing: { label: 'Транскрипція', variant: 'warning' },
@@ -8,7 +8,7 @@ export const PROJECT_STATUSES: Record<string, { label: string; variant: 'default
   training: { label: 'Тренування', variant: 'warning' },
   trained: { label: 'Натреновано', variant: 'success' },
   exported: { label: 'Експортовано', variant: 'success' },
-  error: { label: 'Помилка', variant: 'destructive' },
+  error: { label: 'Помилка', variant: 'danger' },
 }
 
 export const PIPELINE_STEPS = [

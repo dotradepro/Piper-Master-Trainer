@@ -8,8 +8,7 @@ import { GpuMonitor } from '@/components/training/GpuMonitor'
 import { formatDuration, formatBytes } from '@/lib/utils'
 import { Brain, Play, Square, Loader2, Download, BarChart3, RotateCcw } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Card, Button, Form, Table, Badge, Row, Col, Spinner } from 'react-bootstrap'
 import { toast } from 'sonner'
 
 export function TrainingPage() {
@@ -124,9 +123,9 @@ export function TrainingPage() {
 
   if (loading) {
     return (
-      <div className="text-center py-16 text-[hsl(var(--muted-foreground))]">
-        <div className="w-8 h-8 border-2 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-        Завантаження...
+      <div className="text-center py-5 text-muted">
+        <Spinner animation="border" variant="primary" className="mb-3" />
+        <div>Завантаження...</div>
       </div>
     )
   }
@@ -135,225 +134,247 @@ export function TrainingPage() {
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
+      <div className="d-flex align-items-center gap-3 mb-4">
         <Brain size={20} />
         <div>
-          <h1 className="text-lg font-semibold">Тренування</h1>
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">VITS модель на GPU</p>
+          <h1 className="h5 mb-0 fw-semibold">Тренування</h1>
+          <p className="small text-muted mb-0">VITS модель на GPU</p>
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-4">
-          {/* Config */}
-          <Card>
-            <CardHeader className="px-4 py-3">
-              <CardTitle>Конфігурація</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <div>
-                  <label>Датасет</label>
-                  <select value={selectedDataset} onChange={(e) => setSelectedDataset(e.target.value)} disabled={isActive}>
-                    {datasets.map((d) => (
-                      <option key={d.id} value={d.id}>{d.total_segments} seg, {formatDuration(d.total_duration)}</option>
-                    ))}
-                  </select>
+      <Row>
+        <Col lg={8}>
+          <div className="d-flex flex-column gap-3">
+            {/* Config */}
+            <Card>
+              <Card.Header>
+                <Card.Title className="mb-0">Конфігурація</Card.Title>
+              </Card.Header>
+              <Card.Body>
+                <Row className="g-3">
+                  <Col xs={6} md={4}>
+                    <Form.Group>
+                      <Form.Label>Датасет</Form.Label>
+                      <Form.Select value={selectedDataset} onChange={(e) => setSelectedDataset(e.target.value)} disabled={isActive}>
+                        {datasets.map((d) => (
+                          <option key={d.id} value={d.id}>{d.total_segments} seg, {formatDuration(d.total_duration)}</option>
+                        ))}
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+                  <Col xs={6} md={4}>
+                    <Form.Group>
+                      <Form.Label>Режим</Form.Label>
+                      <Form.Select value={mode} onChange={(e) => setMode(e.target.value as 'scratch' | 'finetune')} disabled={isActive}>
+                        <option value="scratch">З нуля</option>
+                        <option value="finetune">Fine-tune</option>
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+                  <Col xs={6} md={4}>
+                    <Form.Group>
+                      <Form.Label>Batch size</Form.Label>
+                      <Form.Control type="number" value={batchSize} onChange={(e) => setBatchSize(+e.target.value)} min={1} max={32} disabled={isActive} />
+                    </Form.Group>
+                  </Col>
+                  <Col xs={6} md={4}>
+                    <Form.Group>
+                      <Form.Label>Макс. епох</Form.Label>
+                      <Form.Control type="number" value={maxEpochs} onChange={(e) => setMaxEpochs(+e.target.value)} min={10} step={100} disabled={isActive} />
+                    </Form.Group>
+                  </Col>
+                  <Col xs={6} md={4}>
+                    <Form.Group>
+                      <Form.Label>Precision</Form.Label>
+                      <Form.Select value={precision} onChange={(e) => setPrecision(e.target.value)} disabled={isActive}>
+                        <option value="32">FP32</option>
+                        <option value="16-mixed">FP16 Mixed</option>
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+                  <Col xs={6} md={4}>
+                    <Form.Group>
+                      <Form.Label>Grad Accum</Form.Label>
+                      <Form.Control type="number" value={accumGrad} onChange={(e) => setAccumGrad(+e.target.value)} min={1} max={32} disabled={isActive} />
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <div className="d-flex gap-2 mt-3">
+                  {!isActive ? (
+                    <Button variant="primary" onClick={handleStart} disabled={starting || !selectedDataset || datasets.length === 0}>
+                      {starting ? <><Spinner animation="border" size="sm" className="me-1" /> Запуск...</> : <><Play size={14} className="me-1" /> Почати тренування</>}
+                    </Button>
+                  ) : (
+                    <Button variant="danger" onClick={handleStop}>
+                      <Square size={14} className="me-1" /> Зупинити
+                    </Button>
+                  )}
                 </div>
-                <div>
-                  <label>Режим</label>
-                  <select value={mode} onChange={(e) => setMode(e.target.value as 'scratch' | 'finetune')} disabled={isActive}>
-                    <option value="scratch">З нуля</option>
-                    <option value="finetune">Fine-tune</option>
-                  </select>
-                </div>
-                <div>
-                  <label>Batch size</label>
-                  <input type="number" value={batchSize} onChange={(e) => setBatchSize(+e.target.value)} min={1} max={32} disabled={isActive} />
-                </div>
-                <div>
-                  <label>Макс. епох</label>
-                  <input type="number" value={maxEpochs} onChange={(e) => setMaxEpochs(+e.target.value)} min={10} step={100} disabled={isActive} />
-                </div>
-                <div>
-                  <label>Precision</label>
-                  <select value={precision} onChange={(e) => setPrecision(e.target.value)} disabled={isActive}>
-                    <option value="32">FP32</option>
-                    <option value="16-mixed">FP16 Mixed</option>
-                  </select>
-                </div>
-                <div>
-                  <label>Grad Accum</label>
-                  <input type="number" value={accumGrad} onChange={(e) => setAccumGrad(+e.target.value)} min={1} max={32} disabled={isActive} />
-                </div>
-              </div>
-              <div className="flex gap-2 mt-4">
-                {!isActive ? (
-                  <Button onClick={handleStart} disabled={starting || !selectedDataset || datasets.length === 0}>
-                    {starting ? <><Loader2 size={14} className="animate-spin" /> Запуск...</> : <><Play size={14} /> Почати тренування</>}
-                  </Button>
-                ) : (
-                  <Button variant="destructive" onClick={handleStop}>
-                    <Square size={14} /> Зупинити
-                  </Button>
+                {error && (
+                  <div className="mt-3 border border-danger rounded p-3 small text-danger d-flex align-items-center gap-2 bg-danger bg-opacity-10">
+                    <span className="rounded-circle bg-danger d-inline-block" style={{ width: 6, height: 6 }} />{error}
+                  </div>
                 )}
-              </div>
-              {error && (
-                <div className="mt-3 rounded-md border border-red-500/20 bg-red-500/5 p-3 text-sm text-red-400 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-400" />{error}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Metrics Chart */}
-          {metricsHistory.length > 1 && (
-            <Card>
-              <CardHeader className="px-4 py-3">
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 size={16} /> Loss
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 pb-4">
-                <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={metricsHistory}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="epoch" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <Tooltip contentStyle={{ background: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', fontSize: 12, borderRadius: 8 }} />
-                    <Line type="monotone" dataKey="loss_g" stroke="#22c55e" strokeWidth={1.5} dot={false} name="Generator" />
-                    <Line type="monotone" dataKey="loss_d" stroke="#f97316" strokeWidth={1.5} dot={false} name="Discriminator" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
+              </Card.Body>
             </Card>
-          )}
 
-          {/* Current Metrics */}
-          {isActive && status?.metrics && Object.keys(status.metrics).length > 0 && (
-            <Card>
-              <CardContent className="px-4 pb-4 pt-4">
-                <div className="grid grid-cols-4 gap-3">
-                  {status.metrics.epoch !== undefined && (
-                    <div className="bg-[hsl(var(--muted))] rounded-md p-3">
-                      <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Epoch</div>
-                      <div className="font-mono font-bold text-lg mt-0.5">{status.metrics.epoch}</div>
-                    </div>
-                  )}
-                  {status.metrics.step !== undefined && (
-                    <div className="bg-[hsl(var(--muted))] rounded-md p-3">
-                      <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Step</div>
-                      <div className="font-mono font-bold text-lg mt-0.5">{status.metrics.step}</div>
-                    </div>
-                  )}
-                  {status.metrics.loss_g !== undefined && (
-                    <div className="bg-[hsl(var(--muted))] rounded-md p-3">
-                      <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Loss G</div>
-                      <div className="font-mono font-bold text-lg mt-0.5 text-green-400">{status.metrics.loss_g.toFixed(3)}</div>
-                    </div>
-                  )}
-                  {status.metrics.loss_d !== undefined && (
-                    <div className="bg-[hsl(var(--muted))] rounded-md p-3">
-                      <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Loss D</div>
-                      <div className="font-mono font-bold text-lg mt-0.5 text-orange-400">{status.metrics.loss_d.toFixed(3)}</div>
-                    </div>
-                  )}
-                </div>
-                <div className="text-xs text-[hsl(var(--muted-foreground))] mt-3 uppercase tracking-wider">
-                  Час: {formatDuration(status.elapsed_seconds)}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+            {/* Metrics Chart */}
+            {metricsHistory.length > 1 && (
+              <Card>
+                <Card.Header>
+                  <Card.Title className="mb-0 d-flex align-items-center gap-2">
+                    <BarChart3 size={16} /> Loss
+                  </Card.Title>
+                </Card.Header>
+                <Card.Body>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <LineChart data={metricsHistory}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="epoch" fontSize={12} />
+                      <YAxis fontSize={12} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="loss_g" stroke="#22c55e" strokeWidth={1.5} dot={false} name="Generator" />
+                      <Line type="monotone" dataKey="loss_d" stroke="#f97316" strokeWidth={1.5} dot={false} name="Discriminator" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </Card.Body>
+              </Card>
+            )}
 
-          {/* Log */}
-          {status && status.log_lines.length > 0 && (
-            <Card>
-              <CardHeader className="px-4 py-3">
-                <CardTitle>Лог</CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 pb-4">
-                <div ref={logRef} className="max-h-48 overflow-y-auto font-mono text-xs text-[hsl(var(--muted-foreground))] space-y-0.5">
-                  {status.log_lines.map((line, i) => (
-                    <div key={i} className={line.includes('ERROR') ? 'text-red-400' : line.includes('Epoch') ? 'text-green-400' : ''}>{line}</div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+            {/* Current Metrics */}
+            {isActive && status?.metrics && Object.keys(status.metrics).length > 0 && (
+              <Card>
+                <Card.Body>
+                  <Row className="g-3">
+                    {status.metrics.epoch !== undefined && (
+                      <Col xs={3}>
+                        <div className="bg-light rounded p-3">
+                          <div className="small text-muted text-uppercase" style={{ letterSpacing: '0.05em' }}>Epoch</div>
+                          <div className="font-monospace fw-bold fs-5 mt-1">{status.metrics.epoch}</div>
+                        </div>
+                      </Col>
+                    )}
+                    {status.metrics.step !== undefined && (
+                      <Col xs={3}>
+                        <div className="bg-light rounded p-3">
+                          <div className="small text-muted text-uppercase" style={{ letterSpacing: '0.05em' }}>Step</div>
+                          <div className="font-monospace fw-bold fs-5 mt-1">{status.metrics.step}</div>
+                        </div>
+                      </Col>
+                    )}
+                    {status.metrics.loss_g !== undefined && (
+                      <Col xs={3}>
+                        <div className="bg-light rounded p-3">
+                          <div className="small text-muted text-uppercase" style={{ letterSpacing: '0.05em' }}>Loss G</div>
+                          <div className="font-monospace fw-bold fs-5 mt-1 text-success">{status.metrics.loss_g.toFixed(3)}</div>
+                        </div>
+                      </Col>
+                    )}
+                    {status.metrics.loss_d !== undefined && (
+                      <Col xs={3}>
+                        <div className="bg-light rounded p-3">
+                          <div className="small text-muted text-uppercase" style={{ letterSpacing: '0.05em' }}>Loss D</div>
+                          <div className="font-monospace fw-bold fs-5 mt-1 text-warning">{status.metrics.loss_d.toFixed(3)}</div>
+                        </div>
+                      </Col>
+                    )}
+                  </Row>
+                  <div className="small text-muted mt-3 text-uppercase" style={{ letterSpacing: '0.05em' }}>
+                    Час: {formatDuration(status.elapsed_seconds)}
+                  </div>
+                </Card.Body>
+              </Card>
+            )}
 
-          {/* Checkpoints */}
-          {checkpoints.length > 0 && (
-            <Card>
-              <CardHeader className="px-4 py-3">
-                <CardTitle>Чекпоінти <span className="text-[hsl(var(--muted-foreground))] font-normal">({checkpoints.length})</span></CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 pb-4">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+            {/* Log */}
+            {status && status.log_lines.length > 0 && (
+              <Card>
+                <Card.Header>
+                  <Card.Title className="mb-0">Лог</Card.Title>
+                </Card.Header>
+                <Card.Body>
+                  <div ref={logRef} className="overflow-auto font-monospace small text-muted" style={{ maxHeight: 200 }}>
+                    {status.log_lines.map((line, i) => (
+                      <div key={i} className={line.includes('ERROR') ? 'text-danger' : line.includes('Epoch') ? 'text-success' : ''}>{line}</div>
+                    ))}
+                  </div>
+                </Card.Body>
+              </Card>
+            )}
+
+            {/* Checkpoints */}
+            {checkpoints.length > 0 && (
+              <Card>
+                <Card.Header>
+                  <Card.Title className="mb-0">Чекпоінти <span className="text-muted fw-normal">({checkpoints.length})</span></Card.Title>
+                </Card.Header>
+                <Card.Body>
+                  <Table hover size="sm" responsive>
                     <thead>
-                      <tr className="border-b border-[hsl(var(--border))]">
-                        <th className="text-left py-2 text-xs font-medium text-[hsl(var(--muted-foreground))]">Файл</th>
-                        <th className="text-right py-2 text-xs font-medium text-[hsl(var(--muted-foreground))]">Розмір</th>
-                        <th className="text-right py-2 text-xs font-medium text-[hsl(var(--muted-foreground))]">Дії</th>
+                      <tr>
+                        <th className="small fw-medium text-muted">Файл</th>
+                        <th className="small fw-medium text-muted text-end">Розмір</th>
+                        <th className="small fw-medium text-muted text-end">Дії</th>
                       </tr>
                     </thead>
                     <tbody>
                       {checkpoints.slice(0, 10).map((ckpt, i) => (
-                        <tr key={i} className="border-b border-[hsl(var(--border))] last:border-0">
-                          <td className="py-2 font-mono text-xs">{ckpt.filename}</td>
-                          <td className="py-2 text-right text-xs text-[hsl(var(--muted-foreground))]">{ckpt.size_mb.toFixed(1)} MB</td>
-                          <td className="py-2 text-right">
-                            <Button variant="outline" size="sm">
-                              <RotateCcw size={12} /> Продовжити
+                        <tr key={i}>
+                          <td className="font-monospace small">{ckpt.filename}</td>
+                          <td className="text-end small text-muted">{ckpt.size_mb.toFixed(1)} MB</td>
+                          <td className="text-end">
+                            <Button variant="outline-secondary" size="sm">
+                              <RotateCcw size={12} className="me-1" /> Продовжити
                             </Button>
                           </td>
                         </tr>
                       ))}
                     </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+                  </Table>
+                </Card.Body>
+              </Card>
+            )}
+          </div>
+        </Col>
 
         {/* Sidebar */}
-        <div className="space-y-4">
-          <GpuMonitor />
-          {datasets.length === 0 && (
-            <Card className="border-yellow-500/20 bg-yellow-500/5">
-              <CardContent className="px-4 pb-4 pt-4">
-                <div className="text-sm text-yellow-400 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
-                  Спочатку підготуйте датасет на кроці "Датасет"
+        <Col lg={4}>
+          <div className="d-flex flex-column gap-3">
+            <GpuMonitor />
+            {datasets.length === 0 && (
+              <Card className="border-warning bg-warning bg-opacity-10">
+                <Card.Body>
+                  <div className="small text-warning d-flex align-items-center gap-2">
+                    <span className="rounded-circle bg-warning d-inline-block" style={{ width: 6, height: 6 }} />
+                    Спочатку підготуйте датасет на кроці "Датасет"
+                  </div>
+                </Card.Body>
+              </Card>
+            )}
+            <Card>
+              <Card.Header>
+                <Card.Title className="mb-0">RTX 3050 рекомендації</Card.Title>
+              </Card.Header>
+              <Card.Body>
+                <div className="d-flex flex-column gap-2 small text-muted">
+                  <div className="d-flex justify-content-between p-2 bg-light rounded">
+                    <span>Batch size</span><span className="font-monospace text-body">4</span>
+                  </div>
+                  <div className="d-flex justify-content-between p-2 bg-light rounded">
+                    <span>Precision</span><span className="font-monospace text-body">FP32 (FP16 якщо OOM)</span>
+                  </div>
+                  <div className="d-flex justify-content-between p-2 bg-light rounded">
+                    <span>Grad accumulation</span><span className="font-monospace text-body">8</span>
+                  </div>
+                  <div className="d-flex justify-content-between p-2 bg-light rounded">
+                    <span>Ефективний batch</span><span className="font-monospace fw-semibold text-primary">{batchSize * accumGrad}</span>
+                  </div>
                 </div>
-              </CardContent>
+              </Card.Body>
             </Card>
-          )}
-          <Card>
-            <CardHeader className="px-4 py-3">
-              <CardTitle>RTX 3050 рекомендації</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <div className="space-y-2 text-xs text-[hsl(var(--muted-foreground))]">
-                <div className="flex justify-between p-2 bg-[hsl(var(--muted))] rounded-md">
-                  <span>Batch size</span><span className="font-mono text-[hsl(var(--foreground))]">4</span>
-                </div>
-                <div className="flex justify-between p-2 bg-[hsl(var(--muted))] rounded-md">
-                  <span>Precision</span><span className="font-mono text-[hsl(var(--foreground))]">FP32 (FP16 якщо OOM)</span>
-                </div>
-                <div className="flex justify-between p-2 bg-[hsl(var(--muted))] rounded-md">
-                  <span>Grad accumulation</span><span className="font-mono text-[hsl(var(--foreground))]">8</span>
-                </div>
-                <div className="flex justify-between p-2 bg-[hsl(var(--muted))] rounded-md">
-                  <span>Ефективний batch</span><span className="font-mono font-semibold text-[hsl(var(--primary))]">{batchSize * accumGrad}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+          </div>
+        </Col>
+      </Row>
     </div>
   )
 }

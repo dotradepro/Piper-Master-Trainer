@@ -4,8 +4,7 @@ import { modelsApi } from '@/api/models'
 import type { ExportedModel } from '@/api/models'
 import { formatBytes } from '@/lib/utils'
 import { PlayCircle, Loader2, Volume2 } from 'lucide-react'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Card, Button, Form, Row, Col, Spinner } from 'react-bootstrap'
 import { toast } from 'sonner'
 
 export function TestPage() {
@@ -70,130 +69,126 @@ export function TestPage() {
 
   if (loading) {
     return (
-      <div className="text-center py-16 text-[hsl(var(--muted-foreground))]">
-        <div className="w-8 h-8 border-2 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-        Завантаження...
+      <div className="text-center py-5 text-muted">
+        <Spinner animation="border" variant="primary" className="mb-3" />
+        <div>Завантаження...</div>
       </div>
     )
   }
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
+      <div className="d-flex align-items-center gap-3 mb-4">
         <PlayCircle size={20} />
         <div>
-          <h1 className="text-lg font-semibold">Тестування</h1>
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">Синтез мовлення та перевірка якості</p>
+          <h1 className="h5 mb-0 fw-semibold">Тестування</h1>
+          <p className="small text-muted mb-0">Синтез мовлення та перевірка якості</p>
         </div>
       </div>
 
       {models.length === 0 ? (
         <Card>
-          <CardContent className="px-4 pb-4 pt-4 text-center">
-            <PlayCircle size={48} className="mx-auto text-[hsl(var(--muted-foreground))] mb-4" />
-            <p className="text-sm text-[hsl(var(--muted-foreground))]">Немає експортованих моделей. Спочатку експортуйте чекпоінт.</p>
-          </CardContent>
+          <Card.Body className="text-center py-4">
+            <PlayCircle size={48} className="text-muted mb-3" />
+            <p className="small text-muted mb-0">Немає експортованих моделей. Спочатку експортуйте чекпоінт.</p>
+          </Card.Body>
         </Card>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-4">
-            {/* Synthesis */}
-            <Card>
-              <CardHeader className="px-4 py-3">
-                <CardTitle className="flex items-center gap-2">
-                  <Volume2 size={16} /> Синтез
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 pb-4">
-                <div className="space-y-3">
-                  <div>
-                    <label>Модель</label>
-                    <select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)}>
+        <Row>
+          <Col lg={8}>
+            <div className="d-flex flex-column gap-3">
+              {/* Synthesis */}
+              <Card>
+                <Card.Header>
+                  <Card.Title className="mb-0 d-flex align-items-center gap-2">
+                    <Volume2 size={16} /> Синтез
+                  </Card.Title>
+                </Card.Header>
+                <Card.Body>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Модель</Form.Label>
+                    <Form.Select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)}>
                       {models.map((m) => (
                         <option key={m.id} value={m.id}>
                           {m.onnx_path.split('/').pop()} ({m.file_size_bytes ? formatBytes(m.file_size_bytes) : '?'})
                         </option>
                       ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label>Текст</label>
-                    <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4}
+                    </Form.Select>
+                  </Form.Group>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Текст</Form.Label>
+                    <Form.Control as="textarea" rows={4} value={text} onChange={(e) => setText(e.target.value)}
                       placeholder="Введіть текст українською..." />
-                  </div>
-                  <Button onClick={handleSynthesize} disabled={synthesizing || !text.trim()} className="w-full">
-                    {synthesizing ? <><Loader2 size={14} className="animate-spin" /> Синтез...</> : <><Volume2 size={14} /> Синтезувати</>}
+                  </Form.Group>
+                  <Button variant="primary" onClick={handleSynthesize} disabled={synthesizing || !text.trim()} className="w-100">
+                    {synthesizing ? <><Spinner animation="border" size="sm" className="me-1" /> Синтез...</> : <><Volume2 size={14} className="me-1" /> Синтезувати</>}
                   </Button>
                   {error && (
-                    <div className="rounded-md border border-red-500/20 bg-red-500/5 p-3 text-sm text-red-400 flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-400" />{error}
+                    <div className="mt-3 border border-danger rounded p-3 small text-danger d-flex align-items-center gap-2 bg-danger bg-opacity-10">
+                      <span className="rounded-circle bg-danger d-inline-block" style={{ width: 6, height: 6 }} />{error}
                     </div>
                   )}
-                </div>
 
-                {/* Player */}
-                {audioUrl && (
-                  <div className="mt-4 bg-[hsl(var(--muted))] rounded-md p-3">
-                    <audio controls src={audioUrl} className="w-full h-8" />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  {/* Player */}
+                  {audioUrl && (
+                    <Card.Body className="mt-3 bg-light rounded p-3">
+                      <audio controls src={audioUrl} className="w-100" style={{ height: 32 }} />
+                    </Card.Body>
+                  )}
+                </Card.Body>
+              </Card>
 
-            {/* History */}
-            {history.length > 0 && (
-              <Card>
-                <CardHeader className="px-4 py-3">
-                  <CardTitle>Історія</CardTitle>
-                </CardHeader>
-                <CardContent className="px-4 pb-4">
-                  <div className="space-y-3">
+              {/* History */}
+              {history.length > 0 && (
+                <Card>
+                  <Card.Header>
+                    <Card.Title className="mb-0">Історія</Card.Title>
+                  </Card.Header>
+                  <Card.Body>
                     {history.map((h, i) => (
-                      <div key={i} className="border-b border-[hsl(var(--border))] last:border-0 pb-3 last:pb-0">
-                        <p className="text-sm mb-2 text-[hsl(var(--muted-foreground))]">{h.text.slice(0, 100)}</p>
-                        <audio controls src={h.url} className="w-full h-8" />
+                      <div key={i} className={`pb-3 ${i < history.length - 1 ? 'border-bottom mb-3' : ''}`}>
+                        <p className="small text-muted mb-2">{h.text.slice(0, 100)}</p>
+                        <audio controls src={h.url} className="w-100" style={{ height: 32 }} />
                       </div>
                     ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                  </Card.Body>
+                </Card>
+              )}
+            </div>
+          </Col>
 
           {/* Settings */}
-          <div className="space-y-4">
+          <Col lg={4}>
             <Card>
-              <CardHeader className="px-4 py-3">
-                <CardTitle>Параметри синтезу</CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 pb-4">
-                <div className="space-y-4">
-                  <div>
-                    <label className="flex justify-between text-xs text-[hsl(var(--muted-foreground))] mb-2">
-                      <span>Швидкість</span><span className="font-mono text-[hsl(var(--foreground))]">{lengthScale.toFixed(1)}</span>
-                    </label>
-                    <input type="range" min={0.5} max={2.0} step={0.1} value={lengthScale}
-                      onChange={(e) => setLengthScale(+e.target.value)} className="w-full" />
-                  </div>
-                  <div>
-                    <label className="flex justify-between text-xs text-[hsl(var(--muted-foreground))] mb-2">
-                      <span>Noise Scale</span><span className="font-mono text-[hsl(var(--foreground))]">{noiseScale.toFixed(2)}</span>
-                    </label>
-                    <input type="range" min={0} max={1} step={0.05} value={noiseScale}
-                      onChange={(e) => setNoiseScale(+e.target.value)} className="w-full" />
-                  </div>
-                  <div>
-                    <label className="flex justify-between text-xs text-[hsl(var(--muted-foreground))] mb-2">
-                      <span>Noise W</span><span className="font-mono text-[hsl(var(--foreground))]">{noiseW.toFixed(2)}</span>
-                    </label>
-                    <input type="range" min={0} max={1} step={0.05} value={noiseW}
-                      onChange={(e) => setNoiseW(+e.target.value)} className="w-full" />
-                  </div>
-                </div>
-              </CardContent>
+              <Card.Header>
+                <Card.Title className="mb-0">Параметри синтезу</Card.Title>
+              </Card.Header>
+              <Card.Body>
+                <Form.Group className="mb-3">
+                  <Form.Label className="d-flex justify-content-between small text-muted mb-2">
+                    <span>Швидкість</span><span className="font-monospace text-body">{lengthScale.toFixed(1)}</span>
+                  </Form.Label>
+                  <Form.Range min={0.5} max={2.0} step={0.1} value={lengthScale}
+                    onChange={(e) => setLengthScale(+e.target.value)} />
+                </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label className="d-flex justify-content-between small text-muted mb-2">
+                    <span>Noise Scale</span><span className="font-monospace text-body">{noiseScale.toFixed(2)}</span>
+                  </Form.Label>
+                  <Form.Range min={0} max={1} step={0.05} value={noiseScale}
+                    onChange={(e) => setNoiseScale(+e.target.value)} />
+                </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label className="d-flex justify-content-between small text-muted mb-2">
+                    <span>Noise W</span><span className="font-monospace text-body">{noiseW.toFixed(2)}</span>
+                  </Form.Label>
+                  <Form.Range min={0} max={1} step={0.05} value={noiseW}
+                    onChange={(e) => setNoiseW(+e.target.value)} />
+                </Form.Group>
+              </Card.Body>
             </Card>
-          </div>
-        </div>
+          </Col>
+        </Row>
       )}
     </div>
   )

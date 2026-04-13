@@ -5,11 +5,7 @@ import { GpuMonitor } from '@/components/training/GpuMonitor'
 import { PROJECT_STATUSES, LANGUAGES } from '@/lib/constants'
 import { formatDate } from '@/lib/utils'
 import { Plus, Trash2, ArrowRight, AudioWaveform } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Card, Button, Form, Badge, Modal, Row, Col, Spinner } from 'react-bootstrap'
 import { toast } from 'sonner'
 
 export function DashboardPage() {
@@ -48,133 +44,129 @@ export function DashboardPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
+      <div className="d-flex align-items-center justify-content-between mb-4">
+        <div className="d-flex align-items-center gap-2">
           <AudioWaveform size={20} />
           <div>
-            <h1 className="text-lg font-semibold">Piper Trainer</h1>
-            <p className="text-sm text-[hsl(var(--muted-foreground))]">
+            <h1 className="h5 mb-0 fw-semibold">Piper Trainer</h1>
+            <p className="text-muted small mb-0">
               Тренування голосових моделей TTS
             </p>
           </div>
         </div>
-        <Button onClick={() => setShowCreate(true)}>
-          <Plus size={16} />
+        <Button variant="primary" onClick={() => setShowCreate(true)}>
+          <Plus size={16} className="me-1" />
           Новий проєкт
         </Button>
       </div>
 
       {/* GPU Status */}
-      <div className="mb-4">
+      <div className="mb-3">
         <GpuMonitor />
       </div>
 
       {/* Create Modal */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Новий проєкт</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label>Назва</label>
-              <Input
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="Мій голос"
-                autoFocus
-                onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-              />
-            </div>
-            <div>
-              <label>Мова</label>
-              <select
-                value={newLang}
-                onChange={(e) => setNewLang(e.target.value)}
-              >
-                {LANGUAGES.map((l) => (
-                  <option key={l.code} value={l.code}>{l.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowCreate(false)}>
-              Скасувати
-            </Button>
-            <Button onClick={handleCreate} disabled={!newName.trim() || creating}>
-              {creating ? 'Створення...' : 'Створити'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Modal show={showCreate} onHide={() => setShowCreate(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Новий проєкт</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group className="mb-3">
+            <Form.Label>Назва</Form.Label>
+            <Form.Control
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Мій голос"
+              autoFocus
+              onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>Мова</Form.Label>
+            <Form.Select
+              value={newLang}
+              onChange={(e) => setNewLang(e.target.value)}
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>{l.name}</option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="outline-secondary" onClick={() => setShowCreate(false)}>
+            Скасувати
+          </Button>
+          <Button variant="primary" onClick={handleCreate} disabled={!newName.trim() || creating}>
+            {creating ? 'Створення...' : 'Створити'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* Projects */}
       {loading && !projects.length ? (
-        <div className="text-center py-16 text-[hsl(var(--muted-foreground))]">
-          <div className="w-8 h-8 border-2 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          Завантаження...
+        <div className="text-center py-5 text-muted">
+          <Spinner className="mb-3" />
+          <div>Завантаження...</div>
         </div>
       ) : error ? (
-        <div className="text-center py-16 text-[hsl(var(--destructive))]">{error}</div>
+        <div className="text-center py-5 text-danger">{error}</div>
       ) : projects.length === 0 ? (
-        <div className="text-center py-20">
-          <div className="w-20 h-20 rounded-lg bg-[hsl(var(--muted))] flex items-center justify-center mx-auto mb-5">
-            <AudioWaveform size={32} className="text-[hsl(var(--muted-foreground))]" />
-          </div>
-          <p className="text-[hsl(var(--muted-foreground))] text-lg mb-2">Поки немає проєктів</p>
-          <p className="text-[hsl(var(--muted-foreground))] text-sm mb-4">Створіть перший для початку тренування</p>
-          <Button onClick={() => setShowCreate(true)}>
-            <Plus size={16} />
+        <div className="text-center py-5">
+          <AudioWaveform size={40} className="mb-3 opacity-25 text-muted" />
+          <p className="text-muted fs-5 mb-2">Поки немає проєктів</p>
+          <p className="text-muted small mb-3">Створіть перший для початку тренування</p>
+          <Button variant="primary" onClick={() => setShowCreate(true)}>
+            <Plus size={16} className="me-1" />
             Створити проєкт
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Row xs={1} md={2} lg={3} className="g-3">
           {projects.map((project) => {
             const statusInfo = PROJECT_STATUSES[project.status] || PROJECT_STATUSES.created
             return (
-              <Link
-                key={project.id}
-                to={`/project/${project.id}/download`}
-                className="no-underline"
-              >
-                <Card className="group hover:border-[hsl(var(--primary))] transition-colors h-full">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-md bg-[hsl(var(--muted))] flex items-center justify-center text-lg">
-                          {project.language === 'uk' ? '🇺🇦' : '🌐'}
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-semibold group-hover:text-[hsl(var(--primary))] transition-colors">
-                            {project.name}
-                          </h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+              <Col key={project.id}>
+                <Link
+                  to={`/project/${project.id}/download`}
+                  className="text-decoration-none"
+                >
+                  <Card className="h-100">
+                    <Card.Body className="p-3">
+                      <div className="d-flex align-items-start justify-content-between">
+                        <div className="d-flex align-items-center gap-2">
+                          <div
+                            className="rounded d-flex align-items-center justify-content-center bg-light fs-5"
+                            style={{ width: 40, height: 40 }}
+                          >
+                            {project.language === 'uk' ? '\u{1F1FA}\u{1F1E6}' : '\u{1F310}'}
+                          </div>
+                          <div>
+                            <h6 className="mb-1 fw-semibold">{project.name}</h6>
+                            <Badge bg={statusInfo.variant}>{statusInfo.label}</Badge>
                           </div>
                         </div>
+                        <div className="d-flex align-items-center gap-1">
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="text-muted p-1"
+                            onClick={(e) => handleDelete(e, project.id, project.name)}
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                          <ArrowRight size={16} className="text-muted" />
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 opacity-0 group-hover:opacity-100"
-                          onClick={(e) => handleDelete(e, project.id, project.name)}
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                        <ArrowRight size={16} className="text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--primary))] transition-colors" />
-                      </div>
-                    </div>
-                    <p className="text-xs text-[hsl(var(--muted-foreground))] mt-3">{formatDate(project.created_at)}</p>
-                  </CardContent>
-                </Card>
-              </Link>
+                      <p className="text-muted small mb-0 mt-2">{formatDate(project.created_at)}</p>
+                    </Card.Body>
+                  </Card>
+                </Link>
+              </Col>
             )
           })}
-        </div>
+        </Row>
       )}
     </div>
   )

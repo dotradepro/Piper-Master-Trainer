@@ -14,15 +14,9 @@ import {
   X,
   Trash2,
   Merge,
-  ChevronLeft,
-  ChevronRight,
   Search,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Progress } from '@/components/ui/progress'
-import { Switch } from '@/components/ui/switch'
+import { Card, Button, Form, Table, InputGroup, ProgressBar, Pagination, Spinner, Row, Col } from 'react-bootstrap'
 import { toast } from 'sonner'
 
 const PAGE_SIZE = 50
@@ -190,20 +184,20 @@ export function TranscriptionPage() {
 
   if (loading) {
     return (
-      <div className="text-center py-16 text-[hsl(var(--muted-foreground))]">
-        <div className="w-8 h-8 border-2 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-        Завантаження...
+      <div className="text-center py-5 text-muted">
+        <Spinner className="mb-3" />
+        <div>Завантаження...</div>
       </div>
     )
   }
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
+      <div className="d-flex align-items-center gap-2 mb-4">
         <FileAudio size={20} />
         <div>
-          <h1 className="text-lg font-semibold">Транскрипція</h1>
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">
+          <h1 className="h5 mb-0 fw-semibold">Транскрипція</h1>
+          <p className="text-muted small mb-0">
             Розпізнавання мовлення через Whisper
           </p>
         </div>
@@ -211,83 +205,88 @@ export function TranscriptionPage() {
 
       {audioFiles.length === 0 ? (
         <Card>
-          <CardContent className="p-10 text-center">
-            <FileAudio size={48} className="mx-auto text-[hsl(var(--muted-foreground))] mb-4 opacity-40" />
-            <p className="text-sm text-[hsl(var(--muted-foreground))]">
+          <Card.Body className="text-center py-5">
+            <FileAudio size={48} className="mb-3 opacity-25 text-muted" />
+            <p className="text-muted small">
               Спочатку завантажте аудіо на кроці "Завантаження"
             </p>
-          </CardContent>
+          </Card.Body>
         </Card>
       ) : (
         <>
           {/* Controls */}
-          <Card className="mb-4">
-            <CardContent className="px-4 pb-4 pt-4">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 items-end">
-                <div>
-                  <label>Аудіо файл</label>
-                  <select
-                    value={selectedFile || ''}
-                    onChange={(e) => setSelectedFile(e.target.value)}
-                  >
-                    {audioFiles.map((f) => (
-                      <option key={f.id} value={f.id}>
-                        {f.filename} ({f.duration_sec ? formatDuration(f.duration_sec) : '?'})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label>Модель</label>
-                  <select
-                    value={modelSize}
-                    onChange={(e) => setModelSize(e.target.value)}
-                  >
-                    <option value="tiny">tiny (75MB, швидка)</option>
-                    <option value="base">base (145MB)</option>
-                    <option value="small">small (488MB, рекомендовано)</option>
-                    <option value="medium">medium (1.5GB)</option>
-                  </select>
-                </div>
-                <div className="flex justify-end col-span-2 md:col-span-1 lg:col-span-2">
+          <Card className="mb-3">
+            <Card.Body>
+              <Row className="g-3 align-items-end">
+                <Col xs={6} md={4} lg={3}>
+                  <Form.Group>
+                    <Form.Label>Аудіо файл</Form.Label>
+                    <Form.Select
+                      value={selectedFile || ''}
+                      onChange={(e) => setSelectedFile(e.target.value)}
+                    >
+                      {audioFiles.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.filename} ({f.duration_sec ? formatDuration(f.duration_sec) : '?'})
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+                <Col xs={6} md={4} lg={3}>
+                  <Form.Group>
+                    <Form.Label>Модель</Form.Label>
+                    <Form.Select
+                      value={modelSize}
+                      onChange={(e) => setModelSize(e.target.value)}
+                    >
+                      <option value="tiny">tiny (75MB, швидка)</option>
+                      <option value="base">base (145MB)</option>
+                      <option value="small">small (488MB, рекомендовано)</option>
+                      <option value="medium">medium (1.5GB)</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+                <Col xs={12} md={4} lg={6} className="text-end">
                   <Button
+                    variant="primary"
                     onClick={handleTranscribe}
                     disabled={transcribing || !selectedFile}
                   >
                     {transcribing ? (
                       <>
-                        <Loader2 size={14} className="animate-spin" />
+                        <Loader2 size={14} className="me-1 spinner-rotate" />
                         Транскрипція...
                       </>
                     ) : (
                       <>
-                        <FileAudio size={14} />
+                        <FileAudio size={14} className="me-1" />
                         Транскрибувати
                       </>
                     )}
                   </Button>
-                </div>
-              </div>
+                </Col>
+              </Row>
               {transcribing && transcribeProgress > 0 && (
-                <Progress value={transcribeProgress} className="mt-3" />
+                <ProgressBar now={transcribeProgress} animated striped className="mt-3" style={{ height: 6 }} />
               )}
-            </CardContent>
+            </Card.Body>
           </Card>
 
           {/* Stats & Actions */}
           {segments.length > 0 && (
-            <div className="flex items-center gap-4 mb-4 text-sm flex-wrap">
-              <span className="text-[hsl(var(--muted-foreground))]">
-                Сегментів: <span className="text-[hsl(var(--foreground))] font-semibold">{includedSegments.length}</span>
+            <div className="d-flex align-items-center gap-3 mb-3 small flex-wrap">
+              <span className="text-muted">
+                Сегментів: <span className="text-body fw-semibold">{includedSegments.length}</span>
                 {' / '}
                 {segments.length}
               </span>
-              <span className="text-[hsl(var(--muted-foreground))]">
-                Тривалість: <span className="text-[hsl(var(--foreground))] font-semibold">{formatDuration(totalDuration)}</span>
+              <span className="text-muted">
+                Тривалість: <span className="text-body fw-semibold">{formatDuration(totalDuration)}</span>
               </span>
               {selectedIds.size >= 2 && (
                 <Button variant="secondary" size="sm" onClick={handleMerge}>
-                  <Merge size={14} />
+                  <Merge size={14} className="me-1" />
                   Об'єднати ({selectedIds.size})
                 </Button>
               )}
@@ -296,26 +295,26 @@ export function TranscriptionPage() {
 
           {/* Filter bar */}
           {segments.length > 0 && (
-            <div className="flex items-center gap-3 mb-4">
-              <div className="relative flex-1 max-w-xs">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
-                <Input
+            <div className="d-flex align-items-center gap-2 mb-3">
+              <InputGroup style={{ maxWidth: 300 }}>
+                <InputGroup.Text><Search size={14} /></InputGroup.Text>
+                <Form.Control
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
                   placeholder="Пошук по тексту..."
-                  className="pl-9"
                 />
-              </div>
-              <select
+              </InputGroup>
+              <Form.Select
                 value={filterIncluded}
                 onChange={(e) => setFilterIncluded(e.target.value as 'all' | 'included' | 'excluded')}
+                style={{ width: 'auto' }}
               >
                 <option value="all">Всі сегменти</option>
                 <option value="included">Включені</option>
                 <option value="excluded">Виключені</option>
-              </select>
+              </Form.Select>
               {filteredSegments.length !== segments.length && (
-                <span className="text-xs text-[hsl(var(--muted-foreground))]">
+                <span className="text-muted small">
                   Знайдено: {filteredSegments.length}
                 </span>
               )}
@@ -324,98 +323,93 @@ export function TranscriptionPage() {
 
           {/* Segments Table */}
           {segments.length > 0 && (
-            <Card className="overflow-hidden">
-              <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-[hsl(var(--muted))] sticky top-0 z-10">
+            <Card>
+              <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                <Table hover size="sm" responsive className="mb-0">
+                  <thead className="sticky-top bg-light">
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-[hsl(var(--muted-foreground))]" style={{ width: 40 }}></th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-[hsl(var(--muted-foreground))]" style={{ width: 80 }}>Початок</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-[hsl(var(--muted-foreground))]" style={{ width: 80 }}>Кінець</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-[hsl(var(--muted-foreground))]">Текст</th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-[hsl(var(--muted-foreground))]" style={{ width: 120 }}>Дії</th>
+                      <th style={{ width: 40 }}></th>
+                      <th style={{ width: 80 }}>Початок</th>
+                      <th style={{ width: 80 }}>Кінець</th>
+                      <th>Текст</th>
+                      <th style={{ width: 120 }} className="text-center">Дії</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[hsl(var(--border))]">
+                  <tbody>
                     {visibleSegments.map((seg) => (
                       <tr
                         key={seg.id}
-                        className={`hover:bg-[hsl(var(--muted))] transition-colors ${
-                          !seg.included ? 'opacity-40' : ''
-                        } ${selectedIds.has(seg.id) ? 'bg-[hsl(var(--muted))]' : ''}`}
+                        className={`${!seg.included ? 'opacity-25' : ''} ${selectedIds.has(seg.id) ? 'table-active' : ''}`}
                       >
                         {/* Checkbox */}
-                        <td className="px-3 py-2">
-                          <input
+                        <td>
+                          <Form.Check
                             type="checkbox"
                             checked={selectedIds.has(seg.id)}
                             onChange={() => toggleSelect(seg.id)}
                           />
                         </td>
                         {/* Times */}
-                        <td className="px-3 py-2 text-xs text-[hsl(var(--muted-foreground))] font-mono">
+                        <td className="text-muted small font-monospace">
                           {formatDuration(seg.start_time)}
                         </td>
-                        <td className="px-3 py-2 text-xs text-[hsl(var(--muted-foreground))] font-mono">
+                        <td className="text-muted small font-monospace">
                           {formatDuration(seg.end_time)}
                         </td>
                         {/* Text */}
-                        <td className="px-3 py-2">
+                        <td>
                           {editingId === seg.id ? (
-                            <div className="flex gap-1">
-                              <Input
+                            <InputGroup size="sm">
+                              <Form.Control
                                 value={editText}
                                 onChange={(e) => setEditText(e.target.value)}
-                                className="flex-1"
                                 autoFocus
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') handleSave(seg.id)
                                   if (e.key === 'Escape') setEditingId(null)
                                 }}
                               />
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-green-500" onClick={() => handleSave(seg.id)}>
+                              <Button variant="outline-success" onClick={() => handleSave(seg.id)}>
                                 <Check size={14} />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-[hsl(var(--destructive))]" onClick={() => setEditingId(null)}>
+                              <Button variant="outline-danger" onClick={() => setEditingId(null)}>
                                 <X size={14} />
                               </Button>
-                            </div>
+                            </InputGroup>
                           ) : (
                             <span
-                              className={`cursor-pointer hover:text-[hsl(var(--primary))] transition-colors ${
-                                seg.text_edited ? 'text-yellow-500' : ''
-                              }`}
+                              className={`cursor-pointer ${seg.text_edited ? 'text-warning' : ''}`}
+                              style={{ cursor: 'pointer' }}
                               onClick={() => {
                                 setEditingId(seg.id)
                                 setEditText(seg.text)
                               }}
                             >
-                              {seg.text || <span className="text-[hsl(var(--muted-foreground))] italic">порожньо</span>}
+                              {seg.text || <span className="text-muted fst-italic">порожньо</span>}
                             </span>
                           )}
                         </td>
                         {/* Actions */}
-                        <td className="px-3 py-2">
-                          <div className="flex items-center justify-center gap-0.5">
+                        <td>
+                          <div className="d-flex align-items-center justify-content-center gap-1">
                             <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
+                              variant="link"
+                              size="sm"
+                              className="p-0 text-muted"
                               onClick={() => playSegment(seg)}
                             >
                               {playingId === seg.id ? <Pause size={14} /> : <Play size={14} />}
                             </Button>
-                            <div className="flex items-center justify-center">
-                              <Switch
-                                checked={seg.included}
-                                onCheckedChange={() => handleToggle(seg)}
-                                className="scale-75"
-                              />
-                            </div>
+                            <Form.Check
+                              type="switch"
+                              checked={seg.included}
+                              onChange={() => handleToggle(seg)}
+                              className="d-inline-block ms-1"
+                            />
                             <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]"
+                              variant="link"
+                              size="sm"
+                              className="p-0 text-muted"
                               onClick={() => handleDelete(seg.id)}
                             >
                               <Trash2 size={14} />
@@ -425,34 +419,26 @@ export function TranscriptionPage() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </Table>
               </div>
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-3 px-4 py-3 border-t border-[hsl(var(--border))] bg-[hsl(var(--muted))]">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={page === 0}
-                    onClick={() => setPage((p) => p - 1)}
-                  >
-                    <ChevronLeft size={14} />
-                    Назад
-                  </Button>
-                  <span className="text-sm text-[hsl(var(--muted-foreground))]">
-                    Сторінка {page + 1} з {totalPages}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={page >= totalPages - 1}
-                    onClick={() => setPage((p) => p + 1)}
-                  >
-                    Далі
-                    <ChevronRight size={14} />
-                  </Button>
-                </div>
+                <Card.Footer className="d-flex justify-content-center">
+                  <Pagination size="sm" className="mb-0">
+                    <Pagination.Prev
+                      disabled={page === 0}
+                      onClick={() => setPage((p) => p - 1)}
+                    />
+                    <Pagination.Item active>
+                      {page + 1} / {totalPages}
+                    </Pagination.Item>
+                    <Pagination.Next
+                      disabled={page >= totalPages - 1}
+                      onClick={() => setPage((p) => p + 1)}
+                    />
+                  </Pagination>
+                </Card.Footer>
               )}
             </Card>
           )}
