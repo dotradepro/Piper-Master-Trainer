@@ -54,10 +54,15 @@ class TrainingConfig:
 class PiperBridge:
     def build_training_command(self, config: TrainingConfig) -> list[str]:
         """Побудувати CLI команду для piper.train."""
+        ckpt_args = []
+        if config.checkpoint_path:
+            ckpt_args = ["--ckpt_path", config.checkpoint_path]
+
         cmd = [
             "python3", "-m", "app.utils.train_runner",
             "--metrics-file", config.metrics_path or "/tmp/piper_metrics.json",
             "fit",
+            *ckpt_args,
             "--data.voice_name", "custom",
             "--data.csv_path", config.csv_path,
             "--data.audio_dir", config.audio_dir,
@@ -72,10 +77,6 @@ class PiperBridge:
             "--trainer.accelerator", "gpu",
             "--trainer.devices", "1",
         ]
-
-        # Checkpoint for fine-tuning
-        if config.checkpoint_path:
-            cmd.extend(["--ckpt_path", config.checkpoint_path])
 
         # Logging
         if config.log_dir:
