@@ -15,9 +15,11 @@ logger = logging.getLogger(__name__)
 
 class TrainingProcess:
     """Контейнер для активного процесу тренування."""
-    def __init__(self, run_id: str, process: subprocess.Popen):
+    def __init__(self, run_id: str, process: subprocess.Popen, project_id: str = "", max_epochs: int = 0):
         self.run_id = run_id
         self.process = process
+        self.project_id = project_id
+        self.max_epochs = max_epochs
         self.metrics: dict = {}
         self.logs: list[str] = []
         self.started_at = datetime.utcnow()
@@ -108,7 +110,7 @@ class TrainingService:
         process = bridge.start_training(config, metrics_handler, log_handler)
 
         with _lock:
-            _active_training = TrainingProcess(run_id, process)
+            _active_training = TrainingProcess(run_id, process, project_id, max_epochs)
 
         logger.info(f"Training started: run={run_id}, pid={process.pid}")
         return process
@@ -137,10 +139,10 @@ class TrainingService:
 
         is_running = _active_training.process.poll() is None
 
-        # Read real-time metrics from file (written by Lightning callback)
-        file_metrics = self._read_metrics_file()
-        if file_metrics:
-            _active_training.metrics.update(file_metrics)
+        # Read progress from checkpoint files
+        progress = self._read_training_progress()
+        if progress:
+            _active_training.metrics.update(progress)
 
         return {
             "active": is_running,
@@ -152,15 +154,37 @@ class TrainingService:
             "elapsed_seconds": (datetime.utcnow() - _active_training.started_at).total_seconds(),
         }
 
-    def _read_metrics_file(self) -> dict | None:
-        """Читання метрик з JSON файлу (callback пише кожні 10 steps)."""
+    def _read_training_progress(self) -> dict | None:
+        """Читання прогресу з checkpoint файлів (epoch з назви)."""
+        import re
+        if not _active_training:
+            return None
         try:
-            # Find metrics file for active project
-            for d in settings.projects_path.iterdir():
-                mf = d / "training_metrics.json"
-                if mf.exists():
-                    data = json.loads(mf.read_text(encoding="utf-8"))
-                    return data
+            project_dir = settings.projects_path / _active_training.project_id
+            checkpoints = list(project_dir.rglob("*.ckpt"))
+            if not checkpoints:
+                return {"status": "preparing", "message": "Підготовка даних..."}
+
+            # Find latest checkpoint by mtime
+            latest = max(checkpoints, key=lambda p: p.stat().st_mtime)
+            # Parse epoch and step from filename: epoch=120-step=74294.ckpt
+            match = re.search(r'epoch=(\d+)-step=(\d+)', latest.name)
+            if match:
+                epoch = int(match.group(1))
+                step = int(match.group(2))
+                max_ep = _active_training.max_epochs or 10000
+                progress = (epoch / max_ep) * 100 if max_ep > 0 else 0
+                elapsed = (datetime.utcnow() - _active_training.started_at).total_seconds()
+                eta = (elapsed / max(epoch, 1)) * (max_ep - epoch) if epoch > 0 else 0
+                return {
+                    "epoch": epoch,
+                    "step": step,
+                    "max_epochs": max_ep,
+                    "progress": round(min(progress, 99.9), 1),
+                    "elapsed_seconds": round(elapsed),
+                    "eta_seconds": round(eta),
+                    "status": "training",
+                }
         except Exception:
             pass
         return None
