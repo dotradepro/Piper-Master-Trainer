@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     whisper_compute_type: str = "float16"
 
     # Training defaults
-    default_batch_size: int = 4
+    default_batch_size: int = 1
     default_precision: str = "16-mixed"
     default_accumulate_grad_batches: int = 8
     default_max_epochs: int = 10000

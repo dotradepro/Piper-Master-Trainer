@@ -61,6 +61,7 @@ class PiperBridge:
             "--data.config_path", config.config_path,
             "--data.espeak_voice", config.espeak_voice,
             "--model.sample_rate", str(config.sample_rate),
+            "--model.segment_size", "4096",
             "--data.batch_size", str(config.batch_size),
             "--trainer.max_epochs", str(config.max_epochs),
             "--trainer.precision", config.precision,

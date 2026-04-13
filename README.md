@@ -33,7 +33,7 @@
 
 ```bash
 # Клонування
-git clone https://github.com/your-repo/Piper-Master-Trainer.git
+git clone https://github.com/dotradepro/Piper-Master-Trainer.git
 cd Piper-Master-Trainer
 
 # Автоматичне встановлення (Docker, NVIDIA toolkit, збірка, запуск)
@@ -120,6 +120,13 @@ npm run dev  # http://localhost
         ├── components/         # UI компоненти
         └── api/                # API клієнт
 ```
+
+## Автор
+
+**DotradePro**
+
+- GitHub: [github.com/dotradepro](https://github.com/dotradepro)
+- Ko-fi: [ko-fi.com/dotradepro](https://ko-fi.com/dotradepro)
 
 ## Ліцензія
 

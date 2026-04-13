@@ -5,7 +5,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PATH="/root/.deno/bin:/opt/piper1-gpl:${PATH}" \
     XDG_CURRENT_DESKTOP=GNOME \
     DESKTOP_SESSION=gnome \
-    PIPER_GPL_PATH=/opt/piper1-gpl
+    PIPER_GPL_PATH=/opt/piper1-gpl \
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 # System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -43,4 +44,4 @@ COPY . .
 RUN mkdir -p storage/projects storage/pretrained
 
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-keep-alive", "300"]

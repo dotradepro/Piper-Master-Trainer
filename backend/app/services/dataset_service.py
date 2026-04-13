@@ -93,7 +93,7 @@ class DatasetService:
                         str(out_path),
                     ],
                     capture_output=True,
-                    timeout=15,
+                    timeout=60,
                     check=True,
                 )
             except subprocess.CalledProcessError as e:

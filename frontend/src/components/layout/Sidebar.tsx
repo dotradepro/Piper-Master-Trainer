@@ -98,10 +98,14 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 mx-3 mb-3 rounded-xl bg-[hsl(var(--secondary)/.5)]">
-        <div className="flex items-center gap-2 text-[11px] text-[hsl(var(--muted-foreground))]">
+      <div className="p-4 mx-3 mb-3 space-y-2">
+        <div className="flex items-center gap-2 text-[11px] text-[hsl(var(--muted-foreground))] px-1">
           <div className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--primary))] animate-pulse-glow" />
           GPU Ready
+        </div>
+        <div className="flex items-center gap-3 px-1">
+          <a href="https://github.com/dotradepro" target="_blank" rel="noopener" className="text-[10px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-smooth no-underline">GitHub</a>
+          <a href="https://ko-fi.com/dotradepro" target="_blank" rel="noopener" className="text-[10px] text-[hsl(var(--muted-foreground))] hover:text-pink-400 transition-smooth no-underline">Ko-fi</a>
         </div>
       </div>
     </aside>
