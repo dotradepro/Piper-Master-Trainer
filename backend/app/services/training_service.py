@@ -72,6 +72,7 @@ class TrainingService:
         abs_csv = settings.storage_path / csv_path
         abs_audio = settings.storage_path / audio_dir
 
+        metrics_file = project_dir / "training_metrics.json"
         config = TrainingConfig(
             csv_path=str(abs_csv),
             audio_dir=str(abs_audio),
@@ -85,6 +86,7 @@ class TrainingService:
             accumulate_grad_batches=accumulate_grad_batches,
             checkpoint_path=base_checkpoint,
             log_dir=str(log_dir),
+            metrics_path=str(metrics_file),
         )
 
         bridge = PiperBridge()
@@ -134,6 +136,12 @@ class TrainingService:
             return {"active": False}
 
         is_running = _active_training.process.poll() is None
+
+        # Read real-time metrics from file (written by Lightning callback)
+        file_metrics = self._read_metrics_file()
+        if file_metrics:
+            _active_training.metrics.update(file_metrics)
+
         return {
             "active": is_running,
             "run_id": _active_training.run_id,
@@ -143,6 +151,19 @@ class TrainingService:
             "started_at": _active_training.started_at.isoformat(),
             "elapsed_seconds": (datetime.utcnow() - _active_training.started_at).total_seconds(),
         }
+
+    def _read_metrics_file(self) -> dict | None:
+        """Читання метрик з JSON файлу (callback пише кожні 10 steps)."""
+        try:
+            # Find metrics file for active project
+            for d in settings.projects_path.iterdir():
+                mf = d / "training_metrics.json"
+                if mf.exists():
+                    data = json.loads(mf.read_text(encoding="utf-8"))
+                    return data
+        except Exception:
+            pass
+        return None
 
     def get_logs(self, last_n: int = 100) -> list[str]:
         if not _active_training:

@@ -33,6 +33,7 @@ class TrainingConfig:
         checkpoint_path: str | None = None,
         checkpoint_every_n_epochs: int = 500,
         log_dir: str | None = None,
+        metrics_path: str | None = None,
     ):
         self.csv_path = csv_path
         self.audio_dir = audio_dir
@@ -47,13 +48,16 @@ class TrainingConfig:
         self.checkpoint_path = checkpoint_path
         self.checkpoint_every_n_epochs = checkpoint_every_n_epochs
         self.log_dir = log_dir
+        self.metrics_path = metrics_path
 
 
 class PiperBridge:
     def build_training_command(self, config: TrainingConfig) -> list[str]:
         """Побудувати CLI команду для piper.train."""
         cmd = [
-            "python3", "-m", "piper.train", "fit",
+            "python3", "-m", "app.utils.train_runner",
+            "--metrics-file", config.metrics_path or "/tmp/piper_metrics.json",
+            "fit",
             "--data.voice_name", "custom",
             "--data.csv_path", config.csv_path,
             "--data.audio_dir", config.audio_dir,

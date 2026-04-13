@@ -8,7 +8,7 @@ import { GpuMonitor } from '@/components/training/GpuMonitor'
 import { formatDuration, formatBytes } from '@/lib/utils'
 import { Brain, Play, Square, Loader2, Download, BarChart3, RotateCcw } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { Card, Button, Form, Table, Badge, Row, Col, Spinner } from 'react-bootstrap'
+import { Card, Button, Form, Table, Badge, Row, Col, Spinner, ProgressBar } from 'react-bootstrap'
 import { toast } from 'sonner'
 
 export function TrainingPage() {
@@ -264,29 +264,68 @@ export function TrainingPage() {
               </Card>
             )}
 
-            {/* Current Metrics */}
+            {/* Live Training Progress */}
             {isActive && status?.metrics && Object.keys(status.metrics).length > 0 && (
               <Card>
+                <Card.Header className="d-flex align-items-center justify-content-between">
+                  <Card.Title className="mb-0">Прогрес тренування</Card.Title>
+                  {status.metrics.progress !== undefined && (
+                    <Badge bg="primary">{status.metrics.progress?.toFixed(1)}%</Badge>
+                  )}
+                </Card.Header>
                 <Card.Body>
-                  <Row className="g-3">
+                  {/* Progress bar */}
+                  {status.metrics.progress !== undefined && (
+                    <ProgressBar
+                      now={status.metrics.progress}
+                      animated
+                      striped
+                      className="mb-3"
+                      style={{ height: 8 }}
+                      label={status.metrics.progress > 10 ? `${status.metrics.progress.toFixed(0)}%` : ''}
+                    />
+                  )}
+
+                  {/* Main metrics row */}
+                  <Row className="g-3 mb-3">
                     {status.metrics.epoch !== undefined && (
-                      <Col xs={3}>
-                        <div className="bg-light rounded p-3">
-                          <div className="small text-muted text-uppercase" style={{ letterSpacing: '0.05em' }}>Epoch</div>
-                          <div className="font-monospace fw-bold fs-5 mt-1">{status.metrics.epoch}</div>
+                      <Col xs={6} md={3}>
+                        <div className="bg-light rounded p-2 text-center">
+                          <div className="font-monospace fw-bold">{status.metrics.epoch}{status.metrics.max_epochs ? ` / ${status.metrics.max_epochs}` : ''}</div>
+                          <div className="small text-muted">Epoch</div>
                         </div>
                       </Col>
                     )}
                     {status.metrics.step !== undefined && (
-                      <Col xs={3}>
-                        <div className="bg-light rounded p-3">
-                          <div className="small text-muted text-uppercase" style={{ letterSpacing: '0.05em' }}>Step</div>
-                          <div className="font-monospace fw-bold fs-5 mt-1">{status.metrics.step}</div>
+                      <Col xs={6} md={3}>
+                        <div className="bg-light rounded p-2 text-center">
+                          <div className="font-monospace fw-bold">{status.metrics.step}</div>
+                          <div className="small text-muted">Step</div>
                         </div>
                       </Col>
                     )}
+                    {status.metrics.eta_seconds !== undefined && status.metrics.eta_seconds > 0 && (
+                      <Col xs={6} md={3}>
+                        <div className="bg-light rounded p-2 text-center">
+                          <div className="font-monospace fw-bold">{formatDuration(status.metrics.eta_seconds)}</div>
+                          <div className="small text-muted">ETA</div>
+                        </div>
+                      </Col>
+                    )}
+                    {status.metrics.elapsed_seconds !== undefined && (
+                      <Col xs={6} md={3}>
+                        <div className="bg-light rounded p-2 text-center">
+                          <div className="font-monospace fw-bold">{formatDuration(status.metrics.elapsed_seconds)}</div>
+                          <div className="small text-muted">Час</div>
+                        </div>
+                      </Col>
+                    )}
+                  </Row>
+
+                  {/* Loss metrics */}
+                  <Row className="g-3">
                     {status.metrics.loss_g !== undefined && (
-                      <Col xs={3}>
+                      <Col xs={6} md={3}>
                         <div className="bg-light rounded p-3">
                           <div className="small text-muted text-uppercase" style={{ letterSpacing: '0.05em' }}>Loss G</div>
                           <div className="font-monospace fw-bold fs-5 mt-1 text-success">{status.metrics.loss_g.toFixed(3)}</div>
