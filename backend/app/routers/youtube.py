@@ -26,6 +26,14 @@ async def get_video_info(url: str):
         raise HTTPException(status_code=400, detail=f"Не вдалося отримати інформацію: {str(e)}")
 
 
+@router.get("/progress/{task_id}")
+async def download_progress(task_id: str):
+    """Прогрес завантаження."""
+    from app.utils.progress import get_progress
+    p = get_progress(task_id)
+    return p or {"progress": 0, "message": "Очікування..."}
+
+
 @router.post("/download", response_model=AudioFileResponse)
 async def download_youtube(
     data: YoutubeDownloadRequest,
@@ -33,20 +41,35 @@ async def download_youtube(
 ):
     """Завантажити аудіо з YouTube."""
     try:
-        import os
-        # Ensure GNOME env for Chrome keyring access in worker thread
+        import os, uuid
         os.environ.setdefault("XDG_CURRENT_DESKTOP", "GNOME")
         os.environ.setdefault("DESKTOP_SESSION", "gnome")
 
+        task_id = str(uuid.uuid4())
+        from app.utils.progress import set_progress, clear_progress
+        set_progress(task_id, 0, "Підключення до YouTube...")
+
         yt_service = YoutubeService()
 
-        # Download audio
+        def progress_hook(d):
+            if d.get("status") == "downloading":
+                pct = d.get("_percent_str", "0%").strip().replace("%", "")
+                try:
+                    set_progress(task_id, int(float(pct)), f"Завантаження: {pct}%")
+                except ValueError:
+                    pass
+            elif d.get("status") == "finished":
+                set_progress(task_id, 90, "Конвертація в WAV...")
+
         result = await asyncio.to_thread(
             yt_service.download_audio,
             data.url,
             data.project_id,
             data.audio_format,
+            progress_hook,
         )
+        set_progress(task_id, 100, "Завершено")
+        clear_progress(task_id)
 
         # Save to database
         af_service = AudioFileService(db)

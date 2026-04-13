@@ -17,6 +17,14 @@ from app.services.transcription_service import TranscriptionService
 router = APIRouter()
 
 
+@router.get("/progress/{project_id}")
+async def transcription_progress(project_id: str):
+    """Прогрес транскрипції."""
+    from app.utils.progress import get_progress
+    p = get_progress(f"transcription:{project_id}")
+    return p or {"progress": 0, "message": "Очікування..."}
+
+
 @router.post("/start", response_model=list[SegmentResponse])
 async def start_transcription(
     data: TranscriptionRequest,
@@ -24,28 +32,38 @@ async def start_transcription(
 ):
     """Запустити транскрипцію аудіо файлу."""
     from app.services.audio_file_service import AudioFileService
+    from app.utils.progress import set_progress, clear_progress
 
-    # Verify audio file exists
     af_service = AudioFileService(db)
     audio_file = await af_service.get_by_id(data.audio_file_id)
     if not audio_file:
         raise HTTPException(status_code=404, detail="Аудіо файл не знайдено")
 
-    # Clear existing segments for this audio file
+    task_key = f"transcription:{data.project_id}"
+    set_progress(task_key, 0, "Завантаження моделі Whisper...")
+
     seg_service = SegmentService(db)
     existing = await seg_service.get_by_audio_file(data.audio_file_id)
     for seg in existing:
         await seg_service.delete(seg.id)
 
-    # Transcribe
     try:
         ts = TranscriptionService()
+        duration = audio_file.duration_sec or 600
+
+        def progress_cb(seg_count: int, current_time: float):
+            pct = min(95, int((current_time / duration) * 100))
+            set_progress(task_key, pct, f"Сегмент {seg_count}, {current_time:.0f}с / {duration:.0f}с")
+
         raw_segments = await asyncio.to_thread(
             ts.transcribe,
             audio_file.file_path,
             language=data.language,
             model_size=data.model_size,
+            progress_callback=progress_cb,
         )
+        set_progress(task_key, 100, "Завершено")
+        clear_progress(task_key)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Помилка транскрипції: {str(e)}")
 

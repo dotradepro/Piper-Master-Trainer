@@ -75,10 +75,57 @@ async def stop_training(run_id: str | None = None):
     return {"status": "stopped"}
 
 
+@router.post("/resume")
+async def resume_training(
+    project_id: str,
+    checkpoint_path: str,
+    dataset_id: str,
+    max_epochs: int = 10000,
+    batch_size: int = 1,
+    precision: str = "32",
+    db: AsyncSession = Depends(get_db),
+):
+    """Відновити тренування з checkpoint."""
+    from app.services.dataset_service import DatasetService
+    ds_service = DatasetService(db)
+    dataset = await ds_service.get_by_id(dataset_id)
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Датасет не знайдено")
+
+    run_id = str(uuid.uuid4())
+    try:
+        await asyncio.to_thread(
+            _training_service.start_training,
+            run_id=run_id,
+            project_id=project_id,
+            dataset_id=dataset_id,
+            csv_path=dataset.csv_path,
+            audio_dir=dataset.audio_dir,
+            mode="finetune",
+            base_checkpoint=checkpoint_path,
+            batch_size=batch_size,
+            max_epochs=max_epochs,
+            precision=precision,
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+    from app.services.project_service import ProjectService
+    await ProjectService(db).update_status(project_id, "training")
+    return {"run_id": run_id, "status": "resumed", "checkpoint": checkpoint_path}
+
+
 @router.get("/status", response_model=TrainingStatusResponse)
 async def training_status():
     """Стан тренування."""
-    return _training_service.get_status()
+    status = _training_service.get_status()
+    # Add progress percentage
+    if status.get("active") and status.get("metrics"):
+        m = status["metrics"]
+        if "epoch" in m:
+            # Try to get max_epochs from logs
+            status["progress"] = m.get("epoch", 0)
+    return status
 
 
 @router.get("/logs")

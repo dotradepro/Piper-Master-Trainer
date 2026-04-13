@@ -1,14 +1,14 @@
 export const API_BASE = '/api'
 
-export const PROJECT_STATUSES: Record<string, { label: string; color: string }> = {
-  created: { label: 'Створено', color: 'text-gray-400' },
-  downloading: { label: 'Завантаження', color: 'text-blue-400' },
-  transcribing: { label: 'Транскрипція', color: 'text-yellow-400' },
-  dataset_ready: { label: 'Датасет готовий', color: 'text-cyan-400' },
-  training: { label: 'Тренування', color: 'text-orange-400' },
-  trained: { label: 'Натреновано', color: 'text-green-400' },
-  exported: { label: 'Експортовано', color: 'text-emerald-400' },
-  error: { label: 'Помилка', color: 'text-red-400' },
+export const PROJECT_STATUSES: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' }> = {
+  created: { label: 'Створено', variant: 'secondary' },
+  downloading: { label: 'Завантаження', variant: 'info' },
+  transcribing: { label: 'Транскрипція', variant: 'warning' },
+  dataset_ready: { label: 'Датасет', variant: 'info' },
+  training: { label: 'Тренування', variant: 'warning' },
+  trained: { label: 'Натреновано', variant: 'success' },
+  exported: { label: 'Експортовано', variant: 'success' },
+  error: { label: 'Помилка', variant: 'destructive' },
 }
 
 export const PIPELINE_STEPS = [

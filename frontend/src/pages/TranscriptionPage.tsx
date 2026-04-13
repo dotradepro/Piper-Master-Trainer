@@ -14,9 +14,13 @@ import {
   X,
   Trash2,
   Merge,
-  ToggleLeft,
-  ToggleRight,
 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Progress } from '@/components/ui/progress'
+import { Switch } from '@/components/ui/switch'
+import { toast } from 'sonner'
 
 export function TranscriptionPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -25,6 +29,7 @@ export function TranscriptionPage() {
   const [segments, setSegments] = useState<Segment[]>([])
   const [loading, setLoading] = useState(true)
   const [transcribing, setTranscribing] = useState(false)
+  const [transcribeProgress, setTranscribeProgress] = useState(0)
   const [modelSize, setModelSize] = useState('small')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
@@ -56,13 +61,18 @@ export function TranscriptionPage() {
   const handleTranscribe = async () => {
     if (!projectId || !selectedFile) return
     setTranscribing(true)
+    setTranscribeProgress(15)
     try {
+      setTranscribeProgress(40)
       const segs = await transcriptionApi.start(projectId, selectedFile, modelSize)
+      setTranscribeProgress(100)
       setSegments(segs)
+      toast.success(`Транскрипцію завершено: ${segs.length} сегментів`)
     } catch (e: any) {
-      alert(e.response?.data?.detail || 'Помилка транскрипції')
+      toast.error(e.response?.data?.detail || 'Помилка транскрипції')
     } finally {
       setTranscribing(false)
+      setTranscribeProgress(0)
     }
   }
 
@@ -108,6 +118,7 @@ export function TranscriptionPage() {
         return [...filtered, merged].sort((a, b) => a.start_time - b.start_time)
       })
       setSelectedIds(new Set())
+      toast.success('Сегменти об\'єднано')
     } catch {
       // ignore
     }
@@ -163,9 +174,7 @@ export function TranscriptionPage() {
   return (
     <div>
       <div className="flex items-center gap-3 mb-8">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-400 flex items-center justify-center shadow-lg shadow-purple-500/20">
-          <FileAudio size={18} className="text-white" />
-        </div>
+        <FileAudio size={24} className="text-[hsl(var(--foreground))]" />
         <div>
           <h1 className="text-xl font-bold">Транскрипція</h1>
           <p className="text-xs text-[hsl(var(--muted-foreground))]">
@@ -175,64 +184,70 @@ export function TranscriptionPage() {
       </div>
 
       {audioFiles.length === 0 ? (
-        <div className="rounded-2xl border border-[hsl(var(--border))] glass p-10 text-center">
-          <FileAudio size={48} className="mx-auto text-[hsl(var(--muted-foreground)/.4)] mb-4" />
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">
-            Спочатку завантажте аудіо на кроці "Завантаження"
-          </p>
-        </div>
+        <Card>
+          <CardContent className="p-10 text-center">
+            <FileAudio size={48} className="mx-auto text-[hsl(var(--muted-foreground))] mb-4 opacity-40" />
+            <p className="text-sm text-[hsl(var(--muted-foreground))]">
+              Спочатку завантажте аудіо на кроці "Завантаження"
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <>
           {/* Controls */}
-          <div className="rounded-2xl border border-[hsl(var(--border))] glass p-5 mb-4">
-            <div className="flex items-center gap-4 flex-wrap">
-              <div>
-                <label className="block text-[11px] font-medium text-[hsl(var(--muted-foreground))] mb-1.5 uppercase tracking-wider">Аудіо файл</label>
-                <select
-                  value={selectedFile || ''}
-                  onChange={(e) => setSelectedFile(e.target.value)}
-                  className="px-4 py-2.5 rounded-xl bg-[hsl(var(--secondary))] border border-[hsl(var(--border))] text-sm transition-smooth"
+          <Card className="mb-4">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-4 flex-wrap">
+                <div>
+                  <label className="block text-[11px] font-medium text-[hsl(var(--muted-foreground))] mb-1.5 uppercase tracking-wider">Аудіо файл</label>
+                  <select
+                    value={selectedFile || ''}
+                    onChange={(e) => setSelectedFile(e.target.value)}
+                    className="h-10 rounded-md border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 text-sm"
+                  >
+                    {audioFiles.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.filename} ({f.duration_sec ? formatDuration(f.duration_sec) : '?'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-[hsl(var(--muted-foreground))] mb-1.5 uppercase tracking-wider">Модель</label>
+                  <select
+                    value={modelSize}
+                    onChange={(e) => setModelSize(e.target.value)}
+                    className="h-10 rounded-md border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 text-sm"
+                  >
+                    <option value="tiny">tiny (75MB, швидка)</option>
+                    <option value="base">base (145MB)</option>
+                    <option value="small">small (488MB, рекомендовано)</option>
+                    <option value="medium">medium (1.5GB)</option>
+                  </select>
+                </div>
+                <div className="flex-1" />
+                <Button
+                  onClick={handleTranscribe}
+                  disabled={transcribing || !selectedFile}
                 >
-                  {audioFiles.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.filename} ({f.duration_sec ? formatDuration(f.duration_sec) : '?'})
-                    </option>
-                  ))}
-                </select>
+                  {transcribing ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      Транскрипція...
+                    </>
+                  ) : (
+                    <>
+                      <FileAudio size={14} />
+                      Транскрибувати
+                    </>
+                  )}
+                </Button>
               </div>
-              <div>
-                <label className="block text-[11px] font-medium text-[hsl(var(--muted-foreground))] mb-1.5 uppercase tracking-wider">Модель</label>
-                <select
-                  value={modelSize}
-                  onChange={(e) => setModelSize(e.target.value)}
-                  className="px-4 py-2.5 rounded-xl bg-[hsl(var(--secondary))] border border-[hsl(var(--border))] text-sm transition-smooth"
-                >
-                  <option value="tiny">tiny (75MB, швидка)</option>
-                  <option value="base">base (145MB)</option>
-                  <option value="small">small (488MB, рекомендовано)</option>
-                  <option value="medium">medium (1.5GB)</option>
-                </select>
-              </div>
-              <div className="flex-1" />
-              <button
-                onClick={handleTranscribe}
-                disabled={transcribing || !selectedFile}
-                className="btn-primary flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(160_71%_40%)] text-white text-sm font-semibold disabled:opacity-50 shadow-lg shadow-[hsl(var(--primary)/.25)] transition-smooth"
-              >
-                {transcribing ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    Транскрипція...
-                  </>
-                ) : (
-                  <>
-                    <FileAudio size={14} />
-                    Транскрибувати
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
+              {transcribing && transcribeProgress > 0 && (
+                <Progress value={transcribeProgress} className="mt-3" />
+              )}
+            </CardContent>
+          </Card>
 
           {/* Stats & Actions */}
           {segments.length > 0 && (
@@ -246,21 +261,18 @@ export function TranscriptionPage() {
                 Тривалість: <span className="text-[hsl(var(--foreground))] font-semibold">{formatDuration(totalDuration)}</span>
               </span>
               {selectedIds.size >= 2 && (
-                <button
-                  onClick={handleMerge}
-                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[hsl(var(--secondary))] text-sm hover:bg-[hsl(var(--primary)/.15)] transition-smooth"
-                >
+                <Button variant="secondary" size="sm" onClick={handleMerge}>
                   <Merge size={14} />
                   Об'єднати ({selectedIds.size})
-                </button>
+                </Button>
               )}
             </div>
           )}
 
           {/* Segments Table */}
           {segments.length > 0 && (
-            <div className="rounded-2xl border border-[hsl(var(--border))] glass overflow-hidden">
-              <div className="grid grid-cols-[40px_70px_70px_1fr_40px_40px_40px] gap-2 px-5 py-3 border-b border-[hsl(var(--border))] text-[11px] text-[hsl(var(--muted-foreground))] font-medium uppercase tracking-wider">
+            <Card className="overflow-hidden">
+              <div className="grid grid-cols-[40px_70px_70px_1fr_40px_40px_40px] gap-2 px-5 py-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))] text-[11px] text-[hsl(var(--muted-foreground))] font-medium uppercase tracking-wider sticky top-0 z-10">
                 <div></div>
                 <div>Початок</div>
                 <div>Кінець</div>
@@ -269,13 +281,13 @@ export function TranscriptionPage() {
                 <div></div>
                 <div></div>
               </div>
-              <div className="divide-y divide-[hsl(var(--border)/.5)] max-h-[60vh] overflow-y-auto">
+              <div className="divide-y divide-[hsl(var(--border))] max-h-[60vh] overflow-y-auto">
                 {segments.map((seg) => (
                   <div
                     key={seg.id}
-                    className={`grid grid-cols-[40px_70px_70px_1fr_40px_40px_40px] gap-2 px-5 py-3 items-center text-sm hover:bg-[hsl(var(--secondary)/.3)] transition-smooth ${
+                    className={`grid grid-cols-[40px_70px_70px_1fr_40px_40px_40px] gap-2 px-5 py-3 items-center text-sm hover:bg-[hsl(var(--muted))] transition-colors ${
                       !seg.included ? 'opacity-40' : ''
-                    } ${selectedIds.has(seg.id) ? 'bg-[hsl(var(--primary)/.05)]' : ''}`}
+                    } ${selectedIds.has(seg.id) ? 'bg-[hsl(var(--muted))]' : ''}`}
                   >
                     {/* Checkbox */}
                     <div>
@@ -297,27 +309,27 @@ export function TranscriptionPage() {
                     <div>
                       {editingId === seg.id ? (
                         <div className="flex gap-1">
-                          <input
+                          <Input
                             value={editText}
                             onChange={(e) => setEditText(e.target.value)}
-                            className="flex-1 px-3 py-1.5 rounded-xl bg-[hsl(var(--secondary))] border border-[hsl(var(--border))] text-sm transition-smooth"
+                            className="flex-1"
                             autoFocus
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') handleSave(seg.id)
                               if (e.key === 'Escape') setEditingId(null)
                             }}
                           />
-                          <button onClick={() => handleSave(seg.id)} className="text-green-400 p-1.5 rounded-xl hover:bg-green-400/10 transition-smooth">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-green-500" onClick={() => handleSave(seg.id)}>
                             <Check size={14} />
-                          </button>
-                          <button onClick={() => setEditingId(null)} className="text-red-400 p-1.5 rounded-xl hover:bg-red-400/10 transition-smooth">
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-[hsl(var(--destructive))]" onClick={() => setEditingId(null)}>
                             <X size={14} />
-                          </button>
+                          </Button>
                         </div>
                       ) : (
                         <span
-                          className={`cursor-pointer hover:text-[hsl(var(--primary))] transition-smooth ${
-                            seg.text_edited ? 'text-yellow-300' : ''
+                          className={`cursor-pointer hover:text-[hsl(var(--primary))] transition-colors ${
+                            seg.text_edited ? 'text-yellow-500' : ''
                           }`}
                           onClick={() => {
                             setEditingId(seg.id)
@@ -329,30 +341,35 @@ export function TranscriptionPage() {
                       )}
                     </div>
                     {/* Play */}
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
                       onClick={() => playSegment(seg)}
-                      className="p-1.5 rounded-xl text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary)/.1)] transition-smooth"
                     >
                       {playingId === seg.id ? <Pause size={14} /> : <Play size={14} />}
-                    </button>
+                    </Button>
                     {/* Toggle */}
-                    <button
-                      onClick={() => handleToggle(seg)}
-                      className="p-1.5 rounded-xl text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--secondary))] transition-smooth"
-                    >
-                      {seg.included ? <ToggleRight size={14} className="text-green-400" /> : <ToggleLeft size={14} />}
-                    </button>
+                    <div className="flex items-center justify-center">
+                      <Switch
+                        checked={seg.included}
+                        onCheckedChange={() => handleToggle(seg)}
+                        className="scale-75"
+                      />
+                    </div>
                     {/* Delete */}
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]"
                       onClick={() => handleDelete(seg.id)}
-                      className="p-1.5 rounded-xl text-[hsl(var(--muted-foreground))] hover:text-red-400 hover:bg-red-400/10 transition-smooth"
                     >
                       <Trash2 size={14} />
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
           )}
         </>
       )}
