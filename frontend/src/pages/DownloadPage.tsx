@@ -78,20 +78,20 @@ export function DownloadPage() {
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-8">
-        <Download size={24} className="text-[hsl(var(--foreground))]" />
+      <div className="flex items-center gap-3 mb-6">
+        <Download size={20} />
         <div>
-          <h1 className="text-xl font-bold">Завантаження аудіо</h1>
-          <p className="text-xs text-[hsl(var(--muted-foreground))]">YouTube або локальний файл</p>
+          <h1 className="text-lg font-semibold">Завантаження аудіо</h1>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">YouTube або локальний файл</p>
         </div>
       </div>
 
       {/* YouTube */}
       <Card className="mb-4">
-        <CardHeader className="pb-3">
+        <CardHeader className="px-4 py-3">
           <CardTitle className="text-sm">YouTube</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 pb-4">
           <div className="flex gap-2">
             <Input
               type="text"
@@ -115,18 +115,18 @@ export function DownloadPage() {
 
       {/* Upload */}
       <Card className="mb-4">
-        <CardContent className="p-5">
+        <CardContent className="px-4 pb-4 pt-4">
           <input ref={fileInputRef} type="file" accept=".wav,.mp3,.flac,.ogg,.m4a" onChange={handleUpload} className="hidden" />
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="w-full border-2 border-dashed border-[hsl(var(--border))] rounded-md p-8 text-center hover:border-[hsl(var(--primary))] hover:bg-[hsl(var(--muted))] transition-colors cursor-pointer group"
+            className="w-full border-2 border-dashed border-[hsl(var(--border))] rounded-md p-6 text-center hover:border-[hsl(var(--primary))] hover:bg-[hsl(var(--muted))] transition-colors cursor-pointer group"
           >
             {uploading
-              ? <Loader2 size={28} className="mx-auto text-[hsl(var(--primary))] animate-spin mb-2" />
-              : <Upload size={28} className="mx-auto text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--primary))] mb-2 transition-colors" />}
+              ? <Loader2 size={24} className="mx-auto text-[hsl(var(--primary))] animate-spin mb-2" />
+              : <Upload size={24} className="mx-auto text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--primary))] mb-2 transition-colors" />}
             <p className="text-sm text-[hsl(var(--muted-foreground))]">{uploading ? 'Завантаження...' : 'Перетягніть файл або натисніть'}</p>
-            <p className="text-[10px] text-[hsl(var(--muted-foreground))] mt-1 tracking-wider">WAV MP3 FLAC OGG M4A</p>
+            <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1 tracking-wider">WAV MP3 FLAC OGG M4A</p>
           </button>
         </CardContent>
       </Card>
@@ -139,7 +139,7 @@ export function DownloadPage() {
 
       {/* Files */}
       <Card>
-        <CardHeader className="pb-3">
+        <CardHeader className="px-4 py-3">
           <CardTitle className="text-sm">
             Аудіо файли {files.length > 0 && <span className="text-[hsl(var(--muted-foreground))] font-normal">({files.length})</span>}
           </CardTitle>
@@ -153,35 +153,57 @@ export function DownloadPage() {
               <p className="text-sm text-[hsl(var(--muted-foreground))]">Аудіо файлів поки немає</p>
             </div>
           ) : (
-            <div className="divide-y divide-[hsl(var(--border))]">
-              {files.map((file) => (
-                <div key={file.id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-[hsl(var(--muted))] transition-colors group">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 flex-shrink-0"
-                    onClick={() => togglePlay(file)}
-                  >
-                    {playingId === file.id ? <Pause size={14} /> : <Play size={14} className="ml-0.5" />}
-                  </Button>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{file.filename}</p>
-                    <div className="flex items-center gap-3 mt-0.5 text-[11px] text-[hsl(var(--muted-foreground))]">
-                      {file.duration_sec != null && <span>{formatDuration(file.duration_sec)}</span>}
-                      {file.file_size_bytes != null && <span>{formatBytes(file.file_size_bytes)}</span>}
-                      {file.source_url && <span className="text-[hsl(var(--destructive))]">YouTube</span>}
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 opacity-0 group-hover:opacity-100 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]"
-                    onClick={() => handleDelete(file.id, file.filename)}
-                  >
-                    <Trash2 size={14} />
-                  </Button>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-[hsl(var(--muted))]">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] w-12"></th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-[hsl(var(--muted-foreground))]">Файл</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] w-24">Тривалість</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] w-24">Розмір</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] w-24">Джерело</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-[hsl(var(--muted-foreground))] w-12"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[hsl(var(--border))]">
+                  {files.map((file) => (
+                    <tr key={file.id} className="hover:bg-[hsl(var(--muted))] transition-colors group">
+                      <td className="px-4 py-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => togglePlay(file)}
+                        >
+                          {playingId === file.id ? <Pause size={14} /> : <Play size={14} className="ml-0.5" />}
+                        </Button>
+                      </td>
+                      <td className="px-4 py-2 font-medium truncate max-w-[300px]">{file.filename}</td>
+                      <td className="px-4 py-2 text-xs text-[hsl(var(--muted-foreground))] font-mono">
+                        {file.duration_sec != null ? formatDuration(file.duration_sec) : '-'}
+                      </td>
+                      <td className="px-4 py-2 text-xs text-[hsl(var(--muted-foreground))]">
+                        {file.file_size_bytes != null ? formatBytes(file.file_size_bytes) : '-'}
+                      </td>
+                      <td className="px-4 py-2 text-xs">
+                        {file.source_url
+                          ? <span className="text-[hsl(var(--destructive))]">YouTube</span>
+                          : <span className="text-[hsl(var(--muted-foreground))]">Upload</span>}
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 opacity-0 group-hover:opacity-100 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]"
+                          onClick={() => handleDelete(file.id, file.filename)}
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>

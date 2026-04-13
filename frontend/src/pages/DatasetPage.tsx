@@ -97,59 +97,58 @@ export function DatasetPage() {
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-8">
-        <Database size={24} className="text-[hsl(var(--foreground))]" />
+      <div className="flex items-center gap-3 mb-6">
+        <Database size={20} />
         <div>
-          <h1 className="text-xl font-bold">Датасет</h1>
-          <p className="text-xs text-[hsl(var(--muted-foreground))]">Підготовка навчального датасету для Piper</p>
+          <h1 className="text-lg font-semibold">Датасет</h1>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">Підготовка навчального датасету для Piper</p>
         </div>
       </div>
 
       {/* Prepare Controls */}
       <Card className="mb-4">
-        <CardHeader className="pb-3">
+        <CardHeader className="px-4 py-3">
           <CardTitle className="text-sm">Параметри підготовки</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-end gap-4 flex-wrap">
+        <CardContent className="px-4 pb-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 items-end">
             <div>
-              <label className="block text-[11px] font-medium text-[hsl(var(--muted-foreground))] mb-1.5 uppercase tracking-wider">Мін. тривалість (с)</label>
-              <Input
+              <label>Мін. тривалість (с)</label>
+              <input
                 type="number"
                 value={minDur}
                 onChange={(e) => setMinDur(+e.target.value)}
                 step={0.5}
                 min={0.5}
                 max={10}
-                className="w-24"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-medium text-[hsl(var(--muted-foreground))] mb-1.5 uppercase tracking-wider">Макс. тривалість (с)</label>
-              <Input
+              <label>Макс. тривалість (с)</label>
+              <input
                 type="number"
                 value={maxDur}
                 onChange={(e) => setMaxDur(+e.target.value)}
                 step={1}
                 min={2}
                 max={30}
-                className="w-24"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-medium text-[hsl(var(--muted-foreground))] mb-1.5 uppercase tracking-wider">Sample Rate</label>
+              <label>Sample Rate</label>
               <select
                 value={sampleRate}
                 onChange={(e) => setSampleRate(+e.target.value)}
-                className="h-10 rounded-md border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 text-sm"
               >
                 <option value={22050}>22050 Hz</option>
                 <option value={16000}>16000 Hz</option>
               </select>
             </div>
-            <Button onClick={handlePrepare} disabled={preparing}>
-              {preparing ? <><Loader2 size={14} className="animate-spin" /> Підготовка...</> : <><Database size={14} /> Підготувати датасет</>}
-            </Button>
+            <div className="flex justify-end">
+              <Button onClick={handlePrepare} disabled={preparing}>
+                {preparing ? <><Loader2 size={14} className="animate-spin" /> Підготовка...</> : <><Database size={14} /> Підготувати датасет</>}
+              </Button>
+            </div>
           </div>
           {preparing && prepareProgress > 0 && (
             <Progress value={prepareProgress} className="mt-3" />
@@ -167,35 +166,35 @@ export function DatasetPage() {
       {stats && (
         <div className="grid gap-4 md:grid-cols-2 mb-4">
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="px-4 py-3">
               <CardTitle className="text-sm flex items-center gap-2">
                 <BarChart3 size={14} />
                 Статистика
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[hsl(var(--muted))] rounded-md p-3">
-                  <div className="text-[11px] text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Сегментів</div>
-                  <div className="text-lg font-bold mt-0.5">{stats.total_segments}</div>
+            <CardContent className="px-4 pb-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-[hsl(var(--muted))] rounded-md p-3 text-center">
+                  <div className="text-lg font-bold">{stats.total_segments}</div>
+                  <div className="text-xs text-[hsl(var(--muted-foreground))]">Сегментів</div>
                 </div>
-                <div className="bg-[hsl(var(--muted))] rounded-md p-3">
-                  <div className="text-[11px] text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Тривалість</div>
-                  <div className="text-lg font-bold mt-0.5">{formatDuration(stats.total_duration_sec)}</div>
+                <div className="bg-[hsl(var(--muted))] rounded-md p-3 text-center">
+                  <div className="text-lg font-bold">{formatDuration(stats.total_duration_sec)}</div>
+                  <div className="text-xs text-[hsl(var(--muted-foreground))]">Тривалість</div>
                 </div>
-                <div className="bg-[hsl(var(--muted))] rounded-md p-3">
-                  <div className="text-[11px] text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Середня</div>
-                  <div className="text-lg font-bold mt-0.5">{stats.avg_duration_sec.toFixed(1)}с</div>
+                <div className="bg-[hsl(var(--muted))] rounded-md p-3 text-center">
+                  <div className="text-lg font-bold">{stats.avg_duration_sec.toFixed(1)}с</div>
+                  <div className="text-xs text-[hsl(var(--muted-foreground))]">Середня</div>
                 </div>
-                <div className="bg-[hsl(var(--muted))] rounded-md p-3">
-                  <div className="text-[11px] text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Мін / Макс</div>
-                  <div className="text-lg font-bold mt-0.5">{stats.min_duration_sec.toFixed(1)} / {stats.max_duration_sec.toFixed(1)}с</div>
+                <div className="bg-[hsl(var(--muted))] rounded-md p-3 text-center">
+                  <div className="text-lg font-bold">{stats.min_duration_sec.toFixed(1)} / {stats.max_duration_sec.toFixed(1)}с</div>
+                  <div className="text-xs text-[hsl(var(--muted-foreground))]">Мін / Макс</div>
                 </div>
               </div>
               {/* Histogram */}
               {stats.duration_histogram.length > 0 && (
                 <div className="mt-4">
-                  <div className="text-[11px] text-[hsl(var(--muted-foreground))] mb-2 uppercase tracking-wider">Розподіл тривалості</div>
+                  <div className="text-xs text-[hsl(var(--muted-foreground))] mb-2">Розподіл тривалості</div>
                   <div className="flex items-end gap-0.5 h-14 p-2 rounded-md bg-[hsl(var(--muted))]">
                     {stats.duration_histogram.map((b, i) => {
                       const maxCount = Math.max(...stats.duration_histogram.map((x) => x.count))
@@ -211,7 +210,7 @@ export function DatasetPage() {
                       )
                     })}
                   </div>
-                  <div className="flex justify-between text-[8px] text-[hsl(var(--muted-foreground))] mt-1">
+                  <div className="flex justify-between text-xs text-[hsl(var(--muted-foreground))] mt-1">
                     <span>{stats.duration_histogram[0]?.min}с</span>
                     <span>{stats.duration_histogram[stats.duration_histogram.length - 1]?.max}с</span>
                   </div>
@@ -221,10 +220,10 @@ export function DatasetPage() {
           </Card>
 
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="px-4 py-3">
               <CardTitle className="text-sm">Валідація</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 pb-4">
               <div className="space-y-2.5">
                 {issues.map((issue, i) => (
                   <div key={i} className="flex items-start gap-2.5 text-sm p-2.5 rounded-md bg-[hsl(var(--muted))]">
@@ -243,7 +242,7 @@ export function DatasetPage() {
       {/* CSV Preview */}
       {preview.length > 0 && (
         <Card className="overflow-hidden">
-          <CardHeader className="pb-3">
+          <CardHeader className="px-4 py-3">
             <CardTitle className="text-sm">
               metadata.csv <span className="text-[hsl(var(--muted-foreground))] font-normal">({previewTotal} записів)</span>
             </CardTitle>
@@ -253,15 +252,15 @@ export function DatasetPage() {
               <table className="w-full text-sm">
                 <thead className="bg-[hsl(var(--muted))] sticky top-0">
                   <tr>
-                    <th className="px-5 py-2.5 text-left text-[11px] font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider w-32">Файл</th>
-                    <th className="px-5 py-2.5 text-left text-[11px] font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Текст</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] w-32">Файл</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-[hsl(var(--muted-foreground))]">Текст</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[hsl(var(--border))]">
                   {preview.map((row, i) => (
                     <tr key={i} className="hover:bg-[hsl(var(--muted))] transition-colors">
-                      <td className="px-5 py-2.5 text-[11px] font-mono text-[hsl(var(--muted-foreground))]">{row.filename}</td>
-                      <td className="px-5 py-2.5">{row.text}</td>
+                      <td className="px-4 py-2 text-xs font-mono text-[hsl(var(--muted-foreground))]">{row.filename}</td>
+                      <td className="px-4 py-2">{row.text}</td>
                     </tr>
                   ))}
                 </tbody>

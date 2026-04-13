@@ -133,16 +133,13 @@ export function TrainingPage() {
 
   const isActive = status?.active ?? false
 
-  const selectClasses = "h-10 w-full rounded-md border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 text-sm disabled:opacity-50"
-  const inputClasses = "h-10 w-full rounded-md border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 text-sm disabled:opacity-50"
-
   return (
     <div>
-      <div className="flex items-center gap-3 mb-8">
-        <Brain size={24} className="text-[hsl(var(--foreground))]" />
+      <div className="flex items-center gap-3 mb-6">
+        <Brain size={20} />
         <div>
-          <h1 className="text-xl font-bold">Тренування</h1>
-          <p className="text-xs text-[hsl(var(--muted-foreground))]">VITS модель на GPU</p>
+          <h1 className="text-lg font-semibold">Тренування</h1>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">VITS модель на GPU</p>
         </div>
       </div>
 
@@ -150,53 +147,47 @@ export function TrainingPage() {
         <div className="lg:col-span-2 space-y-4">
           {/* Config */}
           <Card>
-            <CardHeader>
+            <CardHeader className="px-4 py-3">
               <CardTitle>Конфігурація</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 pb-4">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[11px] font-medium text-[hsl(var(--muted-foreground))] mb-1.5 uppercase tracking-wider">Датасет</label>
-                  <select value={selectedDataset} onChange={(e) => setSelectedDataset(e.target.value)} disabled={isActive}
-                    className={selectClasses}>
+                  <label>Датасет</label>
+                  <select value={selectedDataset} onChange={(e) => setSelectedDataset(e.target.value)} disabled={isActive}>
                     {datasets.map((d) => (
                       <option key={d.id} value={d.id}>{d.total_segments} seg, {formatDuration(d.total_duration)}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-medium text-[hsl(var(--muted-foreground))] mb-1.5 uppercase tracking-wider">Режим</label>
-                  <select value={mode} onChange={(e) => setMode(e.target.value as 'scratch' | 'finetune')} disabled={isActive}
-                    className={selectClasses}>
+                  <label>Режим</label>
+                  <select value={mode} onChange={(e) => setMode(e.target.value as 'scratch' | 'finetune')} disabled={isActive}>
                     <option value="scratch">З нуля</option>
                     <option value="finetune">Fine-tune</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-medium text-[hsl(var(--muted-foreground))] mb-1.5 uppercase tracking-wider">Batch size</label>
-                  <input type="number" value={batchSize} onChange={(e) => setBatchSize(+e.target.value)} min={1} max={32} disabled={isActive}
-                    className={inputClasses} />
+                  <label>Batch size</label>
+                  <input type="number" value={batchSize} onChange={(e) => setBatchSize(+e.target.value)} min={1} max={32} disabled={isActive} />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-medium text-[hsl(var(--muted-foreground))] mb-1.5 uppercase tracking-wider">Макс. епох</label>
-                  <input type="number" value={maxEpochs} onChange={(e) => setMaxEpochs(+e.target.value)} min={10} step={100} disabled={isActive}
-                    className={inputClasses} />
+                  <label>Макс. епох</label>
+                  <input type="number" value={maxEpochs} onChange={(e) => setMaxEpochs(+e.target.value)} min={10} step={100} disabled={isActive} />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-medium text-[hsl(var(--muted-foreground))] mb-1.5 uppercase tracking-wider">Precision</label>
-                  <select value={precision} onChange={(e) => setPrecision(e.target.value)} disabled={isActive}
-                    className={selectClasses}>
+                  <label>Precision</label>
+                  <select value={precision} onChange={(e) => setPrecision(e.target.value)} disabled={isActive}>
                     <option value="32">FP32</option>
                     <option value="16-mixed">FP16 Mixed</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-medium text-[hsl(var(--muted-foreground))] mb-1.5 uppercase tracking-wider">Grad Accum</label>
-                  <input type="number" value={accumGrad} onChange={(e) => setAccumGrad(+e.target.value)} min={1} max={32} disabled={isActive}
-                    className={inputClasses} />
+                  <label>Grad Accum</label>
+                  <input type="number" value={accumGrad} onChange={(e) => setAccumGrad(+e.target.value)} min={1} max={32} disabled={isActive} />
                 </div>
               </div>
-              <div className="flex gap-2 mt-5">
+              <div className="flex gap-2 mt-4">
                 {!isActive ? (
                   <Button onClick={handleStart} disabled={starting || !selectedDataset || datasets.length === 0}>
                     {starting ? <><Loader2 size={14} className="animate-spin" /> Запуск...</> : <><Play size={14} /> Почати тренування</>}
@@ -218,17 +209,17 @@ export function TrainingPage() {
           {/* Metrics Chart */}
           {metricsHistory.length > 1 && (
             <Card>
-              <CardHeader>
+              <CardHeader className="px-4 py-3">
                 <CardTitle className="flex items-center gap-2">
                   <BarChart3 size={16} /> Loss
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-4 pb-4">
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart data={metricsHistory}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="epoch" stroke="hsl(var(--muted-foreground))" fontSize={10} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                    <XAxis dataKey="epoch" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                     <Tooltip contentStyle={{ background: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', fontSize: 12, borderRadius: 8 }} />
                     <Line type="monotone" dataKey="loss_g" stroke="#22c55e" strokeWidth={1.5} dot={false} name="Generator" />
                     <Line type="monotone" dataKey="loss_d" stroke="#f97316" strokeWidth={1.5} dot={false} name="Discriminator" />
@@ -241,34 +232,34 @@ export function TrainingPage() {
           {/* Current Metrics */}
           {isActive && status?.metrics && Object.keys(status.metrics).length > 0 && (
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="px-4 pb-4 pt-4">
                 <div className="grid grid-cols-4 gap-3">
                   {status.metrics.epoch !== undefined && (
                     <div className="bg-[hsl(var(--muted))] rounded-md p-3">
-                      <div className="text-[11px] text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Epoch</div>
+                      <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Epoch</div>
                       <div className="font-mono font-bold text-lg mt-0.5">{status.metrics.epoch}</div>
                     </div>
                   )}
                   {status.metrics.step !== undefined && (
                     <div className="bg-[hsl(var(--muted))] rounded-md p-3">
-                      <div className="text-[11px] text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Step</div>
+                      <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Step</div>
                       <div className="font-mono font-bold text-lg mt-0.5">{status.metrics.step}</div>
                     </div>
                   )}
                   {status.metrics.loss_g !== undefined && (
                     <div className="bg-[hsl(var(--muted))] rounded-md p-3">
-                      <div className="text-[11px] text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Loss G</div>
+                      <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Loss G</div>
                       <div className="font-mono font-bold text-lg mt-0.5 text-green-400">{status.metrics.loss_g.toFixed(3)}</div>
                     </div>
                   )}
                   {status.metrics.loss_d !== undefined && (
                     <div className="bg-[hsl(var(--muted))] rounded-md p-3">
-                      <div className="text-[11px] text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Loss D</div>
+                      <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Loss D</div>
                       <div className="font-mono font-bold text-lg mt-0.5 text-orange-400">{status.metrics.loss_d.toFixed(3)}</div>
                     </div>
                   )}
                 </div>
-                <div className="text-[11px] text-[hsl(var(--muted-foreground))] mt-3 uppercase tracking-wider">
+                <div className="text-xs text-[hsl(var(--muted-foreground))] mt-3 uppercase tracking-wider">
                   Час: {formatDuration(status.elapsed_seconds)}
                 </div>
               </CardContent>
@@ -278,10 +269,10 @@ export function TrainingPage() {
           {/* Log */}
           {status && status.log_lines.length > 0 && (
             <Card>
-              <CardHeader>
+              <CardHeader className="px-4 py-3">
                 <CardTitle>Лог</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-4 pb-4">
                 <div ref={logRef} className="max-h-48 overflow-y-auto font-mono text-xs text-[hsl(var(--muted-foreground))] space-y-0.5">
                   {status.log_lines.map((line, i) => (
                     <div key={i} className={line.includes('ERROR') ? 'text-red-400' : line.includes('Epoch') ? 'text-green-400' : ''}>{line}</div>
@@ -294,22 +285,33 @@ export function TrainingPage() {
           {/* Checkpoints */}
           {checkpoints.length > 0 && (
             <Card>
-              <CardHeader>
+              <CardHeader className="px-4 py-3">
                 <CardTitle>Чекпоінти <span className="text-[hsl(var(--muted-foreground))] font-normal">({checkpoints.length})</span></CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y divide-[hsl(var(--border))]">
-                  {checkpoints.slice(0, 10).map((ckpt, i) => (
-                    <div key={i} className="flex items-center justify-between px-6 py-3">
-                      <span className="font-mono text-xs">{ckpt.filename}</span>
-                      <div className="flex items-center gap-3">
-                        <span className="text-[11px] text-[hsl(var(--muted-foreground))]">{ckpt.size_mb.toFixed(1)} MB</span>
-                        <Button variant="outline" size="sm">
-                          <RotateCcw size={12} /> Продовжити
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+              <CardContent className="px-4 pb-4">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[hsl(var(--border))]">
+                        <th className="text-left py-2 text-xs font-medium text-[hsl(var(--muted-foreground))]">Файл</th>
+                        <th className="text-right py-2 text-xs font-medium text-[hsl(var(--muted-foreground))]">Розмір</th>
+                        <th className="text-right py-2 text-xs font-medium text-[hsl(var(--muted-foreground))]">Дії</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {checkpoints.slice(0, 10).map((ckpt, i) => (
+                        <tr key={i} className="border-b border-[hsl(var(--border))] last:border-0">
+                          <td className="py-2 font-mono text-xs">{ckpt.filename}</td>
+                          <td className="py-2 text-right text-xs text-[hsl(var(--muted-foreground))]">{ckpt.size_mb.toFixed(1)} MB</td>
+                          <td className="py-2 text-right">
+                            <Button variant="outline" size="sm">
+                              <RotateCcw size={12} /> Продовжити
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
             </Card>
@@ -321,7 +323,7 @@ export function TrainingPage() {
           <GpuMonitor />
           {datasets.length === 0 && (
             <Card className="border-yellow-500/20 bg-yellow-500/5">
-              <CardContent className="py-4">
+              <CardContent className="px-4 pb-4 pt-4">
                 <div className="text-sm text-yellow-400 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
                   Спочатку підготуйте датасет на кроці "Датасет"
@@ -330,10 +332,10 @@ export function TrainingPage() {
             </Card>
           )}
           <Card>
-            <CardHeader>
+            <CardHeader className="px-4 py-3">
               <CardTitle>RTX 3050 рекомендації</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 pb-4">
               <div className="space-y-2 text-xs text-[hsl(var(--muted-foreground))]">
                 <div className="flex justify-between p-2 bg-[hsl(var(--muted))] rounded-md">
                   <span>Batch size</span><span className="font-mono text-[hsl(var(--foreground))]">4</span>

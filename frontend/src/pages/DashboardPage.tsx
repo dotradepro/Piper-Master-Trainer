@@ -48,12 +48,15 @@ export function DashboardPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold">Piper Trainer</h1>
-          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-            Тренування голосових моделей TTS
-          </p>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <AudioWaveform size={20} />
+          <div>
+            <h1 className="text-lg font-semibold">Piper Trainer</h1>
+            <p className="text-sm text-[hsl(var(--muted-foreground))]">
+              Тренування голосових моделей TTS
+            </p>
+          </div>
         </div>
         <Button onClick={() => setShowCreate(true)}>
           <Plus size={16} />
@@ -62,7 +65,7 @@ export function DashboardPage() {
       </div>
 
       {/* GPU Status */}
-      <div className="mb-6">
+      <div className="mb-4">
         <GpuMonitor />
       </div>
 
@@ -74,7 +77,7 @@ export function DashboardPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1.5 uppercase tracking-wider">Назва</label>
+              <label>Назва</label>
               <Input
                 type="text"
                 value={newName}
@@ -85,11 +88,10 @@ export function DashboardPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1.5 uppercase tracking-wider">Мова</label>
+              <label>Мова</label>
               <select
                 value={newLang}
                 onChange={(e) => setNewLang(e.target.value)}
-                className="h-10 w-full rounded-md border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 text-sm"
               >
                 {LANGUAGES.map((l) => (
                   <option key={l.code} value={l.code}>{l.name}</option>
@@ -122,7 +124,7 @@ export function DashboardPage() {
             <AudioWaveform size={32} className="text-[hsl(var(--muted-foreground))]" />
           </div>
           <p className="text-[hsl(var(--muted-foreground))] text-lg mb-2">Поки немає проєктів</p>
-          <p className="text-[hsl(var(--muted-foreground))] text-sm mb-6">Створіть перший для початку тренування</p>
+          <p className="text-[hsl(var(--muted-foreground))] text-sm mb-4">Створіть перший для початку тренування</p>
           <Button onClick={() => setShowCreate(true)}>
             <Plus size={16} />
             Створити проєкт

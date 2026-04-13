@@ -6,7 +6,6 @@ import { formatBytes } from '@/lib/utils'
 import { PlayCircle, Loader2, Volume2 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 
 export function TestPage() {
@@ -78,21 +77,19 @@ export function TestPage() {
     )
   }
 
-  const selectClasses = "h-10 w-full rounded-md border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 text-sm"
-
   return (
     <div>
-      <div className="flex items-center gap-3 mb-8">
-        <PlayCircle size={24} className="text-[hsl(var(--foreground))]" />
+      <div className="flex items-center gap-3 mb-6">
+        <PlayCircle size={20} />
         <div>
-          <h1 className="text-xl font-bold">Тестування</h1>
-          <p className="text-xs text-[hsl(var(--muted-foreground))]">Синтез мовлення та перевірка якості</p>
+          <h1 className="text-lg font-semibold">Тестування</h1>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">Синтез мовлення та перевірка якості</p>
         </div>
       </div>
 
       {models.length === 0 ? (
         <Card>
-          <CardContent className="p-10 text-center">
+          <CardContent className="px-4 pb-4 pt-4 text-center">
             <PlayCircle size={48} className="mx-auto text-[hsl(var(--muted-foreground))] mb-4" />
             <p className="text-sm text-[hsl(var(--muted-foreground))]">Немає експортованих моделей. Спочатку експортуйте чекпоінт.</p>
           </CardContent>
@@ -102,17 +99,16 @@ export function TestPage() {
           <div className="lg:col-span-2 space-y-4">
             {/* Synthesis */}
             <Card>
-              <CardHeader>
+              <CardHeader className="px-4 py-3">
                 <CardTitle className="flex items-center gap-2">
                   <Volume2 size={16} /> Синтез
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-4 pb-4">
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-[11px] font-medium text-[hsl(var(--muted-foreground))] mb-1.5 uppercase tracking-wider">Модель</label>
-                    <select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)}
-                      className={selectClasses}>
+                    <label>Модель</label>
+                    <select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)}>
                       {models.map((m) => (
                         <option key={m.id} value={m.id}>
                           {m.onnx_path.split('/').pop()} ({m.file_size_bytes ? formatBytes(m.file_size_bytes) : '?'})
@@ -121,8 +117,8 @@ export function TestPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-medium text-[hsl(var(--muted-foreground))] mb-1.5 uppercase tracking-wider">Текст</label>
-                    <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={4}
+                    <label>Текст</label>
+                    <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4}
                       placeholder="Введіть текст українською..." />
                   </div>
                   <Button onClick={handleSynthesize} disabled={synthesizing || !text.trim()} className="w-full">
@@ -147,14 +143,14 @@ export function TestPage() {
             {/* History */}
             {history.length > 0 && (
               <Card>
-                <CardHeader>
+                <CardHeader className="px-4 py-3">
                   <CardTitle>Історія</CardTitle>
                 </CardHeader>
-                <CardContent className="p-0">
-                  <div className="divide-y divide-[hsl(var(--border))]">
+                <CardContent className="px-4 pb-4">
+                  <div className="space-y-3">
                     {history.map((h, i) => (
-                      <div key={i} className="px-6 py-3.5">
-                        <p className="text-sm mb-2.5 text-[hsl(var(--muted-foreground))]">{h.text.slice(0, 100)}</p>
+                      <div key={i} className="border-b border-[hsl(var(--border))] last:border-0 pb-3 last:pb-0">
+                        <p className="text-sm mb-2 text-[hsl(var(--muted-foreground))]">{h.text.slice(0, 100)}</p>
                         <audio controls src={h.url} className="w-full h-8" />
                       </div>
                     ))}
@@ -167,27 +163,27 @@ export function TestPage() {
           {/* Settings */}
           <div className="space-y-4">
             <Card>
-              <CardHeader>
+              <CardHeader className="px-4 py-3">
                 <CardTitle>Параметри синтезу</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-4 pb-4">
                 <div className="space-y-4">
                   <div>
-                    <label className="flex justify-between text-[11px] text-[hsl(var(--muted-foreground))] mb-2 uppercase tracking-wider">
+                    <label className="flex justify-between text-xs text-[hsl(var(--muted-foreground))] mb-2">
                       <span>Швидкість</span><span className="font-mono text-[hsl(var(--foreground))]">{lengthScale.toFixed(1)}</span>
                     </label>
                     <input type="range" min={0.5} max={2.0} step={0.1} value={lengthScale}
                       onChange={(e) => setLengthScale(+e.target.value)} className="w-full" />
                   </div>
                   <div>
-                    <label className="flex justify-between text-[11px] text-[hsl(var(--muted-foreground))] mb-2 uppercase tracking-wider">
+                    <label className="flex justify-between text-xs text-[hsl(var(--muted-foreground))] mb-2">
                       <span>Noise Scale</span><span className="font-mono text-[hsl(var(--foreground))]">{noiseScale.toFixed(2)}</span>
                     </label>
                     <input type="range" min={0} max={1} step={0.05} value={noiseScale}
                       onChange={(e) => setNoiseScale(+e.target.value)} className="w-full" />
                   </div>
                   <div>
-                    <label className="flex justify-between text-[11px] text-[hsl(var(--muted-foreground))] mb-2 uppercase tracking-wider">
+                    <label className="flex justify-between text-xs text-[hsl(var(--muted-foreground))] mb-2">
                       <span>Noise W</span><span className="font-mono text-[hsl(var(--foreground))]">{noiseW.toFixed(2)}</span>
                     </label>
                     <input type="range" min={0} max={1} step={0.05} value={noiseW}
