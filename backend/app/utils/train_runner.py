@@ -1,13 +1,10 @@
-"""Wrapper that runs piper training with our MetricsFileCallback injected."""
+"""Wrapper: запускає piper.train з MetricsFileCallback через monkeypatch."""
 
 import sys
-import json
-from pathlib import Path
+import os
 
 
 def main():
-    """Run piper.train.fit with MetricsFileCallback injected."""
-    # Parse our custom arg
     metrics_path = None
     piper_args = []
     i = 0
@@ -24,33 +21,24 @@ def main():
         print("ERROR: --metrics-file required", file=sys.stderr)
         sys.exit(1)
 
-    # Import piper training components
-    from piper.train.__main__ import VitsLightningCLI
+    # Monkeypatch Trainer.fit to inject our callback BEFORE piper imports anything
+    import lightning.pytorch as pl
     from app.utils.training_callback import MetricsFileCallback
 
-    # Inject callback into sys.argv for LightningCLI
-    sys.argv = ["train"] + piper_args
+    _orig_fit = pl.Trainer.fit
 
-    # We need to hook into the CLI to add our callback
-    # LightningCLI creates trainer internally, so we monkeypatch
-    import lightning.pytorch as pl
-    original_init = pl.Trainer.__init__
+    def _patched_fit(self, *a, **kw):
+        # Inject callback into trainer
+        if not any(isinstance(c, MetricsFileCallback) for c in self.callbacks):
+            self.callbacks.append(MetricsFileCallback(metrics_path))
+        return _orig_fit(self, *a, **kw)
 
-    def patched_init(self, *a, **kw):
-        # Add our callback
-        callbacks = kw.get("callbacks") or []
-        if not isinstance(callbacks, list):
-            callbacks = list(callbacks)
-        callbacks.append(MetricsFileCallback(metrics_path))
-        kw["callbacks"] = callbacks
-        original_init(self, *a, **kw)
+    pl.Trainer.fit = _patched_fit
 
-    pl.Trainer.__init__ = patched_init
-
-    try:
-        VitsLightningCLI()
-    finally:
-        pl.Trainer.__init__ = original_init
+    # Now run piper.train as if called directly
+    sys.argv = ["piper.train"] + piper_args
+    from piper.train.__main__ import main as piper_main
+    piper_main()
 
 
 if __name__ == "__main__":
