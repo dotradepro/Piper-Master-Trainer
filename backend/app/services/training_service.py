@@ -59,6 +59,9 @@ class TrainingService:
         # Release GPU memory from previous tasks (whisper, etc.)
         self._cleanup_gpu()
 
+        # Clean old checkpoints — keep only the latest one
+        self._cleanup_old_checkpoints(project_id)
+
         project_dir = settings.projects_path / project_id
         cache_dir = project_dir / "cache"
         log_dir = project_dir / "logs"
@@ -213,6 +216,21 @@ class TrainingService:
                 })
         checkpoints.sort(key=lambda x: x["modified"], reverse=True)
         return checkpoints
+
+    def _cleanup_old_checkpoints(self, project_id: str):
+        """Видалити старі checkpoints, залишити тільки останній."""
+        import shutil
+        logs_dir = settings.projects_path / project_id / "logs" / "lightning_logs"
+        if not logs_dir.exists():
+            return
+        # Find all version dirs
+        versions = sorted(logs_dir.glob("version_*"), key=lambda p: p.stat().st_mtime)
+        if len(versions) <= 1:
+            return
+        # Keep only the latest version
+        for old_ver in versions[:-1]:
+            logger.info(f"Removing old checkpoint dir: {old_ver}")
+            shutil.rmtree(old_ver, ignore_errors=True)
 
     def _cleanup_gpu(self):
         """Звільнити GPU пам'ять від попередніх задач."""
