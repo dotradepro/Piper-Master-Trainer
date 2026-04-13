@@ -129,6 +129,7 @@ export function ExportPage() {
                   <th className="small fw-medium text-muted text-end">Розмір</th>
                   <th className="small fw-medium text-muted text-end">Дата</th>
                   <th className="small fw-medium text-muted text-end">Статус</th>
+                  <th className="small fw-medium text-muted text-end">Дія</th>
                 </tr>
               </thead>
               <tbody>
@@ -143,6 +144,11 @@ export function ExportPage() {
                     </td>
                     <td className="text-end">
                       <Badge bg="success">ONNX</Badge>
+                    </td>
+                    <td className="text-end">
+                      <Button variant="outline-primary" size="sm" href={`/api/audio/${m.onnx_path}`} download>
+                        <Download size={12} className="me-1" />Скачати
+                      </Button>
                     </td>
                   </tr>
                 ))}

@@ -173,7 +173,7 @@ class DatasetService:
         return result.scalar_one_or_none()
 
     async def get_stats(self, dataset_id: str) -> dict:
-        """Статистика датасету."""
+        """Статистика датасету (быстрая — без ffprobe, из CSV + config)."""
         dataset = await self.get_by_id(dataset_id)
         if not dataset:
             return {}
@@ -183,34 +183,31 @@ class DatasetService:
             return {}
 
         lines = csv_path.read_text(encoding="utf-8").strip().split("\n")
-        durations = []
         text_lengths = []
-
-        audio_dir = settings.storage_path / dataset.audio_dir
         for line in lines:
             parts = line.split("|", 1)
-            if len(parts) != 2:
-                continue
-            wav_name, text = parts
-            text_lengths.append(len(text))
+            if len(parts) == 2:
+                text_lengths.append(len(parts[1]))
 
-            wav_path = audio_dir / wav_name
-            if wav_path.exists():
-                dur = self._get_duration(wav_path)
-                if dur > 0:
-                    durations.append(dur)
+        total = dataset.total_segments
+        dur = dataset.total_duration
+        avg = dur / total if total > 0 else 0
 
-        if not durations:
-            return {"total_segments": 0}
+        # Parse config for filter info
+        config = {}
+        if dataset.config:
+            try:
+                config = json.loads(dataset.config)
+            except Exception:
+                pass
 
         return {
-            "total_segments": len(durations),
-            "total_duration_sec": sum(durations),
-            "avg_duration_sec": sum(durations) / len(durations),
-            "min_duration_sec": min(durations),
-            "max_duration_sec": max(durations),
-            "avg_text_length": sum(text_lengths) / len(text_lengths) if text_lengths else 0,
-            "duration_histogram": self._histogram(durations, bins=10),
+            "total_segments": total,
+            "total_duration_sec": dur,
+            "avg_duration_sec": round(avg, 1),
+            "min_duration_sec": config.get("min_duration", 1.0),
+            "max_duration_sec": config.get("max_duration", 15.0),
+            "avg_text_length": round(sum(text_lengths) / len(text_lengths), 0) if text_lengths else 0,
         }
 
     def _histogram(self, values: list[float], bins: int = 10) -> list[dict]:

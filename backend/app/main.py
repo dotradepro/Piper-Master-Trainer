@@ -80,5 +80,7 @@ async def serve_audio(file_path: str):
         abs_path.resolve().relative_to(settings.storage_path.resolve())
     except ValueError:
         raise HTTPException(status_code=403, detail="Доступ заборонено")
+    if abs_path.suffix == ".onnx":
+        return FileResponse(abs_path, media_type="application/octet-stream", filename=abs_path.name)
     media_type = "audio/wav" if abs_path.suffix == ".wav" else f"audio/{abs_path.suffix[1:]}"
     return FileResponse(abs_path, media_type=media_type)
