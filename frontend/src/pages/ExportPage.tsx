@@ -5,7 +5,7 @@ import { modelsApi } from '@/api/models'
 import type { CheckpointInfo } from '@/api/training'
 import type { ExportedModel } from '@/api/models'
 import { formatBytes, formatDate } from '@/lib/utils'
-import { Package, Loader2, Download } from 'lucide-react'
+import { Package, Loader2, Download, FileArchive, FileJson } from 'lucide-react'
 import { Card, Button, Form, Table, Badge, ProgressBar, Spinner } from 'react-bootstrap'
 import { toast } from 'sonner'
 
@@ -129,7 +129,7 @@ export function ExportPage() {
                   <th className="small fw-medium text-muted text-end">Розмір</th>
                   <th className="small fw-medium text-muted text-end">Дата</th>
                   <th className="small fw-medium text-muted text-end">Статус</th>
-                  <th className="small fw-medium text-muted text-end">Дія</th>
+                  <th className="small fw-medium text-muted text-end">Завантажити</th>
                 </tr>
               </thead>
               <tbody>
@@ -146,9 +146,17 @@ export function ExportPage() {
                       <Badge bg="success">ONNX</Badge>
                     </td>
                     <td className="text-end">
-                      <Button variant="outline-primary" size="sm" href={`/api/audio/${m.onnx_path}`} download>
-                        <Download size={12} className="me-1" />Скачати
-                      </Button>
+                      <div className="d-flex gap-1 justify-content-end">
+                        <Button variant="primary" size="sm" href={`/api/models/download-zip/${m.id}`} download title="ZIP архів (ONNX + JSON)">
+                          <FileArchive size={12} className="me-1" />ZIP
+                        </Button>
+                        <Button variant="outline-secondary" size="sm" href={`/api/audio/${m.onnx_path}`} download title="Тільки ONNX модель">
+                          <Download size={12} className="me-1" />.onnx
+                        </Button>
+                        <Button variant="outline-secondary" size="sm" href={`/api/audio/${m.config_path}`} download title="Тільки JSON конфіг">
+                          <FileJson size={12} className="me-1" />.json
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
