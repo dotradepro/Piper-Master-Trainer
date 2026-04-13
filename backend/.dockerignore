@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+storage/projects/
+storage/pretrained/
+storage/db.sqlite3
+storage/cookies.txt
+tests/
+.git/
+*.egg-info/
