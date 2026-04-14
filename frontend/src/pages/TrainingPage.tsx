@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { trainingApi } from '@/api/training'
 import { datasetsApi } from '@/api/datasets'
-import type { TrainingStatus, CheckpointInfo } from '@/api/training'
+import type { TrainingStatus, CheckpointInfo, CatalogVoice, DownloadStatus } from '@/api/training'
 import type { DatasetInfo } from '@/api/datasets'
 import { GpuMonitor } from '@/components/training/GpuMonitor'
 import { formatDuration, formatBytes } from '@/lib/utils'
-import { Brain, Play, Square, Loader2, Download, BarChart3, RotateCcw } from 'lucide-react'
+import { Brain, Play, Square, Loader2, Download, BarChart3, RotateCcw, Upload, Trash2 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { Card, Button, Form, Table, Badge, Row, Col, Spinner, ProgressBar } from 'react-bootstrap'
+import { Card, Button, Form, Table, Badge, Row, Col, Spinner, ProgressBar, Modal } from 'react-bootstrap'
 import { toast } from 'sonner'
 
 export function TrainingPage() {
@@ -17,6 +17,14 @@ export function TrainingPage() {
   const [selectedDataset, setSelectedDataset] = useState<string>('')
   const [status, setStatus] = useState<TrainingStatus | null>(null)
   const [checkpoints, setCheckpoints] = useState<CheckpointInfo[]>([])
+  const [pretrained, setPretrained] = useState<CheckpointInfo[]>([])
+  const [selectedPretrained, setSelectedPretrained] = useState<string>('')
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null)
+  const uploadRef = useRef<HTMLInputElement>(null)
+  const [showCatalog, setShowCatalog] = useState(false)
+  const [catalog, setCatalog] = useState<CatalogVoice[]>([])
+  const [downloads, setDownloads] = useState<Record<string, DownloadStatus>>({})
+  const catalogPollRef = useRef<number | null>(null)
   const [metricsHistory, setMetricsHistory] = useState<{ epoch: number; loss_g?: number; loss_d?: number }[]>([])
   const [loading, setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
@@ -24,30 +32,65 @@ export function TrainingPage() {
   const pollRef = useRef<number | null>(null)
   const logRef = useRef<HTMLDivElement>(null)
 
-  // Config
-  const [batchSize, setBatchSize] = useState(4)
-  const [maxEpochs, setMaxEpochs] = useState(10000)
-  const [precision, setPrecision] = useState('32')
-  const [accumGrad, setAccumGrad] = useState(8)
-  const [mode, setMode] = useState<'scratch' | 'finetune'>('scratch')
+  // Config — persisted per project in localStorage
+  const storageKey = projectId ? `training_config_${projectId}` : ''
+  const savedConfig = (() => {
+    if (!storageKey) return null
+    try { return JSON.parse(localStorage.getItem(storageKey) || 'null') } catch { return null }
+  })()
+
+  const [batchSize, setBatchSize] = useState<number>(savedConfig?.batchSize ?? 4)
+  const [maxEpochs, setMaxEpochs] = useState<number>(savedConfig?.maxEpochs ?? 10000)
+  const [precision, setPrecision] = useState<string>(savedConfig?.precision ?? '32')
+  const [precisionTouched, setPrecisionTouched] = useState(!!savedConfig?.precision)
+  const [mode, setMode] = useState<'scratch' | 'finetune'>(savedConfig?.mode ?? 'scratch')
+
+  // Persist config on change
+  useEffect(() => {
+    if (!storageKey) return
+    localStorage.setItem(storageKey, JSON.stringify({
+      batchSize, maxEpochs, precision, mode,
+      pretrained: selectedPretrained,
+    }))
+  }, [storageKey, batchSize, maxEpochs, precision, mode, selectedPretrained])
+
+  // Restore selectedPretrained after pretrained list loads
+  useEffect(() => {
+    if (savedConfig?.pretrained && pretrained.some((p) => p.path === savedConfig.pretrained)) {
+      setSelectedPretrained(savedConfig.pretrained)
+    }
+  }, [pretrained])
+
+  // Auto-switch to fp16-mixed when mode becomes finetune (economy ~40% VRAM),
+  // unless user already changed precision manually.
+  useEffect(() => {
+    if (mode === 'finetune' && !precisionTouched && precision === '32') {
+      setPrecision('16-mixed')
+    }
+  }, [mode])
 
   useEffect(() => {
     if (projectId) loadData()
-    return () => { if (pollRef.current) clearInterval(pollRef.current) }
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+      if (catalogPollRef.current) clearInterval(catalogPollRef.current)
+    }
   }, [projectId])
 
   const loadData = async () => {
     if (!projectId) return
     try {
-      const [ds, st, ckpts] = await Promise.all([
+      const [ds, st, ckpts, pre] = await Promise.all([
         datasetsApi.list(projectId),
         trainingApi.status(),
         trainingApi.checkpoints(projectId),
+        trainingApi.pretrained(),
       ])
       setDatasets(ds)
       if (ds.length > 0) setSelectedDataset(ds[0].id)
       setStatus(st)
       setCheckpoints(ckpts)
+      setPretrained(pre)
       if (st.active) startPolling()
     } catch {
     } finally {
@@ -87,14 +130,17 @@ export function TrainingPage() {
     setError(null)
     setMetricsHistory([])
     try {
+      if (mode === 'finetune' && !selectedPretrained) {
+        throw new Error('Для fine-tune оберіть базову модель')
+      }
       await trainingApi.start({
         project_id: projectId,
         dataset_id: selectedDataset,
         mode,
+        base_checkpoint: mode === 'finetune' ? selectedPretrained : undefined,
         batch_size: batchSize,
         max_epochs: maxEpochs,
         precision,
-        accumulate_grad_batches: accumGrad,
       })
       const st = await trainingApi.status()
       setStatus(st)
@@ -128,6 +174,98 @@ export function TrainingPage() {
       toast.error(msg)
     } finally {
       setStarting(false)
+    }
+  }
+
+  const refreshPretrained = async () => {
+    const pre = await trainingApi.pretrained()
+    setPretrained(pre)
+  }
+
+  const openCatalog = async () => {
+    setShowCatalog(true)
+    try {
+      const data = await trainingApi.pretrainedCatalog()
+      setCatalog(data.voices)
+      setDownloads(data.downloads || {})
+      startCatalogPolling()
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Не вдалося завантажити каталог')
+    }
+  }
+
+  const closeCatalog = () => {
+    setShowCatalog(false)
+    if (catalogPollRef.current) {
+      clearInterval(catalogPollRef.current)
+      catalogPollRef.current = null
+    }
+  }
+
+  const startCatalogPolling = () => {
+    if (catalogPollRef.current) return
+    catalogPollRef.current = window.setInterval(async () => {
+      try {
+        const data = await trainingApi.pretrainedCatalog()
+        setCatalog(data.voices)
+        setDownloads(data.downloads || {})
+        // If all done, stop polling and refresh local list
+        const anyActive = Object.values(data.downloads || {}).some(
+          (d) => d.status === 'downloading' || d.status === 'resolving' || d.status === 'starting'
+        )
+        if (!anyActive) {
+          if (catalogPollRef.current) {
+            clearInterval(catalogPollRef.current)
+            catalogPollRef.current = null
+          }
+          await refreshPretrained()
+        }
+      } catch {
+      }
+    }, 1500)
+  }
+
+  const handleCatalogDownload = async (voice: CatalogVoice) => {
+    try {
+      const state = await trainingApi.downloadPretrained(voice.id)
+      setDownloads((prev) => ({ ...prev, [voice.id]: state }))
+      startCatalogPolling()
+      toast.success(`Завантаження ${voice.label} розпочато`)
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Помилка завантаження')
+    }
+  }
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.name.endsWith('.ckpt')) {
+      toast.error('Оберіть .ckpt файл')
+      return
+    }
+    setUploadProgress(0)
+    try {
+      const uploaded = await trainingApi.uploadPretrained(file, setUploadProgress)
+      await refreshPretrained()
+      setSelectedPretrained(uploaded.path)
+      toast.success(`Модель ${uploaded.filename} завантажена`)
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Помилка завантаження')
+    } finally {
+      setUploadProgress(null)
+      if (uploadRef.current) uploadRef.current.value = ''
+    }
+  }
+
+  const handleDeletePretrained = async (filename: string, path: string) => {
+    if (!confirm(`Видалити ${filename}?`)) return
+    try {
+      await trainingApi.deletePretrained(filename)
+      if (selectedPretrained === path) setSelectedPretrained('')
+      await refreshPretrained()
+      toast.success('Модель видалена')
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Помилка видалення')
     }
   }
 
@@ -194,6 +332,77 @@ export function TrainingPage() {
                       </Form.Select>
                     </Form.Group>
                   </Col>
+                  {mode === 'finetune' && (
+                    <Col xs={12}>
+                      <Form.Group>
+                        <div className="d-flex align-items-center justify-content-between mb-1">
+                          <Form.Label className="mb-0">Базова модель</Form.Label>
+                          <div className="d-flex gap-2 align-items-center">
+                            <input
+                              ref={uploadRef}
+                              type="file"
+                              accept=".ckpt"
+                              onChange={handleUpload}
+                              style={{ display: 'none' }}
+                            />
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              onClick={openCatalog}
+                              disabled={isActive}
+                            >
+                              <Download size={12} className="me-1" /> Каталог онлайн
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline-primary"
+                              onClick={() => uploadRef.current?.click()}
+                              disabled={isActive || uploadProgress !== null}
+                            >
+                              {uploadProgress !== null ? (
+                                <><Spinner animation="border" size="sm" className="me-1" /> {uploadProgress}%</>
+                              ) : (
+                                <><Upload size={12} className="me-1" /> Свій .ckpt</>
+                              )}
+                            </Button>
+                            <Button size="sm" variant="outline-secondary" onClick={refreshPretrained} disabled={isActive}>
+                              <RotateCcw size={12} />
+                            </Button>
+                          </div>
+                        </div>
+                        <Form.Select value={selectedPretrained} onChange={(e) => setSelectedPretrained(e.target.value)} disabled={isActive}>
+                          <option value="">— оберіть pretrained —</option>
+                          {pretrained.map((p) => (
+                            <option key={p.path} value={p.path}>{p.filename} ({p.size_mb.toFixed(0)} MB)</option>
+                          ))}
+                        </Form.Select>
+                        {pretrained.length > 0 && (
+                          <div className="mt-2 d-flex flex-wrap gap-1">
+                            {pretrained.map((p) => (
+                              <Badge key={p.path} bg="light" text="dark" className="d-flex align-items-center gap-1 border">
+                                <span className="font-monospace small">{p.filename}</span>
+                                <button
+                                  type="button"
+                                  className="btn btn-link btn-sm p-0 text-danger"
+                                  style={{ lineHeight: 1 }}
+                                  onClick={() => handleDeletePretrained(p.filename, p.path)}
+                                  disabled={isActive}
+                                  title="Видалити"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                        {pretrained.length === 0 && uploadProgress === null && (
+                          <Form.Text className="text-warning">
+                            Немає pretrained моделей. Завантажте .ckpt (напр. uk_UA-lada-x_low.ckpt — жіночий, uk_UA-ukrainian_tts-medium.ckpt — чоловічий). Джерело: github.com/rhasspy/piper → VOICES.md
+                          </Form.Text>
+                        )}
+                      </Form.Group>
+                    </Col>
+                  )}
                   <Col xs={6} md={4}>
                     <Form.Group>
                       <Form.Label>Batch size</Form.Label>
@@ -209,16 +418,10 @@ export function TrainingPage() {
                   <Col xs={6} md={4}>
                     <Form.Group>
                       <Form.Label>Precision</Form.Label>
-                      <Form.Select value={precision} onChange={(e) => setPrecision(e.target.value)} disabled={isActive}>
+                      <Form.Select value={precision} onChange={(e) => { setPrecision(e.target.value); setPrecisionTouched(true) }} disabled={isActive}>
                         <option value="32">FP32</option>
                         <option value="16-mixed">FP16 Mixed</option>
                       </Form.Select>
-                    </Form.Group>
-                  </Col>
-                  <Col xs={6} md={4}>
-                    <Form.Group>
-                      <Form.Label>Grad Accum</Form.Label>
-                      <Form.Control type="number" value={accumGrad} onChange={(e) => setAccumGrad(+e.target.value)} min={1} max={32} disabled={isActive} />
                     </Form.Group>
                   </Col>
                 </Row>
@@ -399,6 +602,88 @@ export function TrainingPage() {
           </div>
         </Col>
 
+        <Modal show={showCatalog} onHide={closeCatalog} size="lg" scrollable>
+          <Modal.Header closeButton>
+            <Modal.Title className="h6">Каталог Piper голосів (HF rhasspy/piper-checkpoints)</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {catalog.length === 0 ? (
+              <div className="text-center text-muted py-4">
+                <Spinner animation="border" size="sm" /> Завантаження каталогу...
+              </div>
+            ) : (
+              <Table hover size="sm" responsive className="mb-0">
+                <thead>
+                  <tr>
+                    <th className="small fw-medium text-muted">Голос</th>
+                    <th className="small fw-medium text-muted">Мова</th>
+                    <th className="small fw-medium text-muted">Стать</th>
+                    <th className="small fw-medium text-muted">Якість</th>
+                    <th className="small fw-medium text-muted text-end">Дії</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {catalog.map((v) => {
+                    const dl = downloads[v.id]
+                    const isActive = dl && (dl.status === 'downloading' || dl.status === 'resolving' || dl.status === 'starting')
+                    return (
+                      <tr key={v.id}>
+                        <td>
+                          <div className="fw-medium">{v.label}</div>
+                          <div className="font-monospace small text-muted">{v.id}</div>
+                        </td>
+                        <td className="small">{v.locale}</td>
+                        <td className="small">
+                          <Badge bg={v.gender === 'male' ? 'info' : 'warning'} text={v.gender === 'male' ? 'light' : 'dark'}>
+                            {v.gender === 'male' ? 'чол' : 'жін'}
+                          </Badge>
+                        </td>
+                        <td className="small font-monospace">{v.quality}</td>
+                        <td className="text-end" style={{ minWidth: 180 }}>
+                          {v.installed && !isActive ? (
+                            <Badge bg="success">✓ Встановлено</Badge>
+                          ) : isActive ? (
+                            <div style={{ minWidth: 140 }}>
+                              <ProgressBar
+                                now={dl.progress}
+                                label={dl.status === 'downloading' ? `${dl.progress.toFixed(0)}%` : dl.status}
+                                animated
+                                style={{ height: 16 }}
+                              />
+                              {dl.total > 0 && (
+                                <div className="small text-muted mt-1">
+                                  {(dl.downloaded / 1024 / 1024).toFixed(0)} / {(dl.total / 1024 / 1024).toFixed(0)} MB
+                                </div>
+                              )}
+                            </div>
+                          ) : dl && dl.status === 'error' ? (
+                            <div>
+                              <Badge bg="danger" className="mb-1">Помилка</Badge>
+                              <Button size="sm" variant="outline-primary" onClick={() => handleCatalogDownload(v)}>
+                                <Download size={12} className="me-1" /> Повторити
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button size="sm" variant="primary" onClick={() => handleCatalogDownload(v)}>
+                              <Download size={12} className="me-1" /> Завантажити
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </Table>
+            )}
+            <div className="small text-muted mt-3">
+              Джерело: <span className="font-monospace">huggingface.co/datasets/rhasspy/piper-checkpoints</span>. Файли зберігаються в <span className="font-monospace">backend/storage/pretrained/</span>.
+            </div>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" size="sm" onClick={closeCatalog}>Закрити</Button>
+          </Modal.Footer>
+        </Modal>
+
         {/* Sidebar */}
         <Col lg={4}>
           <div className="d-flex flex-column gap-3">
@@ -426,10 +711,7 @@ export function TrainingPage() {
                     <span>Precision</span><span className="font-monospace text-body">FP32 (FP16 якщо OOM)</span>
                   </div>
                   <div className="d-flex justify-content-between p-2 bg-light rounded">
-                    <span>Grad accumulation</span><span className="font-monospace text-body">8</span>
-                  </div>
-                  <div className="d-flex justify-content-between p-2 bg-light rounded">
-                    <span>Ефективний batch</span><span className="font-monospace fw-semibold text-primary">{batchSize * accumGrad}</span>
+                    <span>Batch size</span><span className="font-monospace fw-semibold text-primary">{batchSize}</span>
                   </div>
                 </div>
               </Card.Body>

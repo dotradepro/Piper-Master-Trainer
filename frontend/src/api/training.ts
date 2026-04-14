@@ -17,6 +17,29 @@ export interface CheckpointInfo {
   modified?: string
 }
 
+export interface CatalogVoice {
+  id: string
+  language: string
+  locale: string
+  voice: string
+  quality: string
+  gender: string
+  espeak_voice: string
+  label: string
+  local_filename: string
+  installed: boolean
+}
+
+export interface DownloadStatus {
+  voice_id: string
+  status: 'starting' | 'resolving' | 'downloading' | 'done' | 'error'
+  progress: number
+  total: number
+  downloaded: number
+  error: string | null
+  filename: string
+}
+
 export const trainingApi = {
   start: (data: {
     project_id: string
@@ -42,6 +65,28 @@ export const trainingApi = {
     api.get<CheckpointInfo[]>(`/training/checkpoints/${projectId}`).then((r) => r.data),
 
   pretrained: () => api.get<CheckpointInfo[]>('/training/pretrained').then((r) => r.data),
+
+  uploadPretrained: (file: File, onProgress?: (pct: number) => void) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post<CheckpointInfo>('/training/pretrained/upload', form, {
+      onUploadProgress: (e) => {
+        if (onProgress && e.total) onProgress(Math.round((e.loaded / e.total) * 100))
+      },
+    }).then((r) => r.data)
+  },
+
+  deletePretrained: (filename: string) =>
+    api.delete<{ status: string }>(`/training/pretrained/${encodeURIComponent(filename)}`).then((r) => r.data),
+
+  pretrainedCatalog: () =>
+    api.get<{ voices: CatalogVoice[]; downloads: Record<string, DownloadStatus> }>('/training/pretrained/catalog').then((r) => r.data),
+
+  downloadPretrained: (voiceId: string) =>
+    api.post<DownloadStatus>('/training/pretrained/download', null, { params: { voice_id: voiceId } }).then((r) => r.data),
+
+  downloadStatus: (voiceId: string) =>
+    api.get<DownloadStatus>(`/training/pretrained/download/${encodeURIComponent(voiceId)}`).then((r) => r.data),
 
   resume: (projectId: string, checkpointPath: string, datasetId: string, maxEpochs = 10000, batchSize = 1, precision = '32') =>
     api.post('/training/resume', null, {

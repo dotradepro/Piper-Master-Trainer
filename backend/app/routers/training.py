@@ -1,8 +1,10 @@
 import asyncio
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import settings
 
 from app.database import get_db
 from app.schemas.training import (
@@ -144,3 +146,69 @@ async def list_checkpoints(project_id: str):
 async def list_pretrained():
     """Список претренованих моделей."""
     return _training_service.list_pretrained()
+
+
+@router.post("/pretrained/upload", response_model=CheckpointInfo)
+async def upload_pretrained(file: UploadFile = File(...)):
+    """Завантажити .ckpt файл претренованої моделі."""
+    if not file.filename or not file.filename.endswith(".ckpt"):
+        raise HTTPException(status_code=400, detail="Очікується .ckpt файл")
+
+    filename = file.filename.replace("/", "_").replace("\\", "_")
+    settings.pretrained_path.mkdir(parents=True, exist_ok=True)
+    dest = settings.pretrained_path / filename
+
+    size = 0
+    CHUNK = 1024 * 1024
+    with dest.open("wb") as f:
+        while chunk := await file.read(CHUNK):
+            f.write(chunk)
+            size += len(chunk)
+
+    return {
+        "path": str(dest),
+        "filename": filename,
+        "size_mb": size / 1024 / 1024,
+    }
+
+
+@router.get("/pretrained/catalog")
+async def pretrained_catalog():
+    """Каталог доступних онлайн Piper голосів (HF rhasspy/piper-checkpoints)."""
+    from app.services.pretrained_catalog import get_catalog, list_active_downloads
+    return {
+        "voices": get_catalog(),
+        "downloads": list_active_downloads(),
+    }
+
+
+@router.post("/pretrained/download")
+async def pretrained_download(voice_id: str):
+    """Запустити фонове завантаження голосу з каталогу."""
+    from app.services.pretrained_catalog import download_voice
+    try:
+        state = await download_voice(voice_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return state
+
+
+@router.get("/pretrained/download/{voice_id}")
+async def pretrained_download_status(voice_id: str):
+    """Статус фонового завантаження."""
+    from app.services.pretrained_catalog import get_download_status
+    state = get_download_status(voice_id)
+    if not state:
+        raise HTTPException(status_code=404, detail="Завантаження не знайдено")
+    return state
+
+
+@router.delete("/pretrained/{filename}")
+async def delete_pretrained(filename: str):
+    """Видалити pretrained модель."""
+    safe = filename.replace("/", "").replace("\\", "").replace("..", "")
+    target = settings.pretrained_path / safe
+    if not target.exists() or target.parent.resolve() != settings.pretrained_path.resolve():
+        raise HTTPException(status_code=404, detail="Файл не знайдено")
+    target.unlink()
+    return {"status": "deleted", "filename": safe}
