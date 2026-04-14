@@ -21,6 +21,11 @@ async def prepare_dataset(
     db: AsyncSession = Depends(get_db),
 ):
     """Підготувати датасет з транскрибованих сегментів."""
+    from app.services.project_service import ProjectService
+    project = await ProjectService(db).get_by_id(data.project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Проєкт не знайдено")
+
     service = DatasetService(db)
     try:
         dataset = await service.prepare(
@@ -28,6 +33,7 @@ async def prepare_dataset(
             min_duration=data.min_duration,
             max_duration=data.max_duration,
             sample_rate=data.sample_rate,
+            espeak_voice=project.espeak_voice,
         )
         # Update project status
         from app.services.project_service import ProjectService

@@ -77,6 +77,41 @@ class TrainingService:
         abs_csv = settings.storage_path / csv_path
         abs_audio = settings.storage_path / audio_dir
 
+        # Adapt to base checkpoint: multi-speaker CSV + fresh finetune state.
+        # Якщо base_checkpoint у storage/pretrained/ — це стороння модель,
+        # стартуємо з чистого optimizer/loop state (економить ~1.5 GiB VRAM
+        # і дозволяє робити finetune на 4 GB картах типу RTX 3050).
+        extra_env: dict[str, str] = {}
+        is_fresh_finetune = False
+        if base_checkpoint:
+            try:
+                info = self._peek_checkpoint(base_checkpoint)
+                if info["num_speakers"] > 1:
+                    ms_csv = project_dir / "dataset" / "metadata_finetune.csv"
+                    self._write_multispeaker_csv(abs_csv, ms_csv, speaker_id=0)
+                    logger.info(
+                        f"Base ckpt num_speakers={info['num_speakers']} — rewrote CSV -> {ms_csv}"
+                    )
+                    abs_csv = ms_csv
+
+                # Finetune з каталогу pretrained → fresh state (без чужого Adam)
+                is_fresh_finetune = "pretrained" in str(base_checkpoint).replace("\\", "/").split("/")
+                if is_fresh_finetune:
+                    extra_env["PIPER_FINETUNE_FRESH"] = "1"
+                    logger.info(
+                        f"Fresh finetune from pretrained: optimizer/loops state "
+                        f"will be stripped to save VRAM; epoch counter resets to 0"
+                    )
+                elif info["epoch"] >= max_epochs:
+                    # Resume власного checkpoint — Lightning продовжує epoch counter
+                    shifted = info["epoch"] + max_epochs
+                    logger.info(
+                        f"Resume at epoch={info['epoch']}, user max_epochs={max_epochs} — shifting to {shifted}"
+                    )
+                    max_epochs = shifted
+            except Exception as e:
+                logger.warning(f"Could not peek base_checkpoint: {e}")
+
         metrics_file = project_dir / "training_metrics.json"
         config = TrainingConfig(
             csv_path=str(abs_csv),
@@ -110,7 +145,7 @@ class TrainingService:
             if on_log:
                 on_log(line)
 
-        process = bridge.start_training(config, metrics_handler, log_handler)
+        process = bridge.start_training(config, metrics_handler, log_handler, extra_env=extra_env)
 
         with _lock:
             _active_training = TrainingProcess(run_id, process, project_id, max_epochs)
@@ -248,6 +283,42 @@ class TrainingService:
             pass
         gc.collect()
         logger.info("GPU memory cleaned up")
+
+    def _peek_checkpoint(self, ckpt_path: str) -> dict:
+        """Повернути {num_speakers, epoch} з checkpoint для налаштування запуску."""
+        import pathlib
+        import torch
+        import torch.serialization
+        torch.serialization.add_safe_globals([pathlib.PosixPath, pathlib.WindowsPath])
+        p = Path(ckpt_path)
+        if not p.is_absolute() and not p.exists():
+            alt = settings.storage_path / ckpt_path
+            if alt.exists():
+                p = alt
+            else:
+                stripped = ckpt_path[len("storage/"):] if ckpt_path.startswith("storage/") else ckpt_path
+                alt2 = settings.storage_path / stripped
+                if alt2.exists():
+                    p = alt2
+        ckpt = torch.load(str(p), weights_only=False, map_location="cpu")
+        hp = ckpt.get("hyper_parameters", {}) if isinstance(ckpt, dict) else {}
+        return {
+            "num_speakers": int(hp.get("num_speakers", 1) or 1),
+            "epoch": int(ckpt.get("epoch", 0) or 0),
+        }
+
+    def _write_multispeaker_csv(self, src: Path, dst: Path, speaker_id: int = 0):
+        """Перетворити 2-колонковий CSV (wav|text) на 3-колонковий (wav|speaker|text)."""
+        lines = Path(src).read_text(encoding="utf-8").strip().splitlines()
+        out = []
+        for line in lines:
+            parts = line.split("|", 1)
+            if len(parts) != 2:
+                continue
+            wav, text = parts
+            out.append(f"{wav}|{speaker_id}|{text}")
+        Path(dst).parent.mkdir(parents=True, exist_ok=True)
+        Path(dst).write_text("\n".join(out) + "\n", encoding="utf-8")
 
     def list_pretrained(self) -> list[dict]:
         """Список претренованих чекпоінтів."""

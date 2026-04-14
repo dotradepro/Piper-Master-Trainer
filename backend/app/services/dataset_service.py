@@ -23,6 +23,7 @@ class DatasetService:
         min_duration: float = 1.0,
         max_duration: float = 15.0,
         sample_rate: int = 22050,
+        espeak_voice: str = "uk",
     ) -> Dataset:
         """Підготувати датасет з сегментів: нарізка WAV, нормалізація, генерація CSV."""
         # Get included segments
@@ -121,7 +122,7 @@ class DatasetService:
         # Write config.json for piper
         config = {
             "audio": {"sample_rate": sample_rate},
-            "espeak": {"voice": "uk"},
+            "espeak": {"voice": espeak_voice},
             "inference": {"noise_scale": 0.667, "length_scale": 1.0, "noise_w": 0.8},
             "num_speakers": 0,
             "phoneme_type": "espeak",

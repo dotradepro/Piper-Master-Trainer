@@ -55,7 +55,7 @@ class PiperBridge:
     def build_training_command(self, config: TrainingConfig) -> list[str]:
         """Побудувати CLI команду для piper.train."""
         cmd = [
-            "python3", "-m", "piper.train", "fit",
+            "python3", "-m", "app.utils.piper_train_entry", "fit",
             "--data.voice_name", "custom",
             "--data.csv_path", config.csv_path,
             "--data.audio_dir", config.audio_dir,
@@ -86,6 +86,7 @@ class PiperBridge:
         config: TrainingConfig,
         on_metrics: Callable[[dict], None] | None = None,
         on_log: Callable[[str], None] | None = None,
+        extra_env: dict | None = None,
     ) -> subprocess.Popen:
         """Запустити тренування як subprocess."""
         cmd = self.build_training_command(config)
@@ -93,6 +94,8 @@ class PiperBridge:
 
         env = os.environ.copy()
         env["PYTHONUNBUFFERED"] = "1"
+        if extra_env:
+            env.update(extra_env)
 
         process = subprocess.Popen(
             cmd,
