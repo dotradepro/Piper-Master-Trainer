@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { youtubeApi, getAudioUrl } from '@/api/youtube'
 import type { AudioFile } from '@/api/youtube'
 import { formatDuration, formatBytes } from '@/lib/utils'
-import { Download, Upload, Trash2, Play, Pause, Loader2, Music } from 'lucide-react'
+import { Download, Upload, Trash2, Play, Pause, Loader2, Music, KeyRound, CheckCircle2, Wand2 } from 'lucide-react'
 import { Card, Button, Table, InputGroup, Form, ProgressBar, Spinner, Alert } from 'react-bootstrap'
 import { toast } from 'sonner'
 
@@ -19,8 +19,14 @@ export function DownloadPage() {
   const [downloadProgress, setDownloadProgress] = useState(0)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const cookiesInputRef = useRef<HTMLInputElement | null>(null)
+  const [hasCookies, setHasCookies] = useState(false)
+  const [cookiesBusy, setCookiesBusy] = useState(false)
 
-  useEffect(() => { if (projectId) loadFiles() }, [projectId])
+  useEffect(() => {
+    if (projectId) loadFiles()
+    youtubeApi.cookiesStatus().then((s) => setHasCookies(s.has_cookies)).catch(() => {})
+  }, [projectId])
 
   const loadFiles = async () => {
     if (!projectId) return
@@ -65,6 +71,47 @@ export function DownloadPage() {
     toast.success(`Видалено: ${name}`)
   }
 
+  const handleCookiesExtract = async () => {
+    setCookiesBusy(true)
+    try {
+      const res = await youtubeApi.extractCookies('firefox')
+      setHasCookies(true)
+      toast.success(res.message)
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Не вдалося витягти cookies')
+    } finally {
+      setCookiesBusy(false)
+    }
+  }
+
+  const handleCookiesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCookiesBusy(true)
+    try {
+      await youtubeApi.uploadCookies(file)
+      setHasCookies(true)
+      toast.success('Cookies збережено')
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Помилка завантаження cookies')
+    } finally {
+      setCookiesBusy(false)
+      if (cookiesInputRef.current) cookiesInputRef.current.value = ''
+    }
+  }
+
+  const handleCookiesDelete = async () => {
+    if (!confirm('Видалити збережені cookies?')) return
+    setCookiesBusy(true)
+    try {
+      await youtubeApi.deleteCookies()
+      setHasCookies(false)
+      toast.success('Cookies видалено')
+    } finally {
+      setCookiesBusy(false)
+    }
+  }
+
   const togglePlay = (file: AudioFile) => {
     if (playingId === file.id) { audioRef.current?.pause(); setPlayingId(null); return }
     audioRef.current?.pause()
@@ -85,8 +132,64 @@ export function DownloadPage() {
 
       {/* YouTube */}
       <Card className="mb-3">
-        <Card.Header className="py-2">
+        <Card.Header className="py-2 d-flex justify-content-between align-items-center">
           <span className="small fw-semibold">YouTube</span>
+          <div className="d-flex align-items-center gap-2">
+            <input
+              ref={cookiesInputRef}
+              type="file"
+              accept=".txt,text/plain"
+              onChange={handleCookiesUpload}
+              className="d-none"
+            />
+            {hasCookies ? (
+              <>
+                <span className="small text-success d-flex align-items-center gap-1">
+                  <CheckCircle2 size={14} /> Cookies активні
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline-secondary"
+                  onClick={() => cookiesInputRef.current?.click()}
+                  disabled={cookiesBusy}
+                  title="Замінити cookies.txt"
+                >
+                  <Upload size={12} />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline-danger"
+                  onClick={handleCookiesDelete}
+                  disabled={cookiesBusy}
+                  title="Видалити cookies"
+                >
+                  <Trash2 size={12} />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={handleCookiesExtract}
+                  disabled={cookiesBusy}
+                  title="Автоматично з Firefox (потрібен залогінений YouTube у Firefox на хості)"
+                >
+                  {cookiesBusy ? <Loader2 size={12} className="spinner-rotate me-1" /> : <Wand2 size={12} className="me-1" />}
+                  Авто з Firefox
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline-primary"
+                  onClick={() => cookiesInputRef.current?.click()}
+                  disabled={cookiesBusy}
+                  title="Завантажити cookies.txt вручну"
+                >
+                  <KeyRound size={12} className="me-1" /> Вручну
+                </Button>
+              </>
+            )}
+          </div>
         </Card.Header>
         <Card.Body>
           <InputGroup>

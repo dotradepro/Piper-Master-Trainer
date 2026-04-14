@@ -25,38 +25,82 @@ class YoutubeService:
             "no_warnings": True,
             "remote_components": {"ejs:github"},
         }
-        # Use cookies.txt if available
+        # Priority: (1) cookies.txt (2) Firefox (unencrypted, works in Docker)
+        # Chrome cookies skipped — require D-Bus/keyring for decryption, not available in container.
         cookies_file = settings.storage_path / "cookies.txt"
         if cookies_file.exists():
             opts["cookiefile"] = str(cookies_file)
-        else:
-            # Try browser cookies
-            opts["cookiesfrombrowser"] = ("chrome",)
+        elif Path("/root/.mozilla/firefox").exists():
+            opts["cookiesfrombrowser"] = ("firefox",)
         return opts
 
-    def ensure_cookies(self) -> bool:
-        """Експортувати Chrome cookies, якщо cookies.txt ще не існує.
-        Використовує yt-dlp напряму для коректного дешифрування."""
+    def extract_cookies_from_browser(self, browser: str = "firefox") -> tuple[bool, str]:
+        """Витягти cookies з браузера, що встановлено в контейнері/замонтовано.
+        Firefox працює без D-Bus/keyring. Chrome у Docker не підтримується
+        (cookies зашифровані libsecret/gnome-keyring). Повертає (success, message)."""
+        if browser not in ("firefox", "chrome"):
+            return False, f"Непідтримуваний браузер: {browser}"
+
+        # Перевірка наявності профілю
+        if browser == "firefox" and not Path("/root/.mozilla/firefox").exists():
+            return False, "Firefox профіль не знайдено. Змонтуй ~/.mozilla/firefox у docker-compose.yml"
+        if browser == "chrome" and not Path("/root/.config/google-chrome").exists():
+            return False, "Chrome профіль не знайдено"
+
         cookies_file = settings.storage_path / "cookies.txt"
-        if cookies_file.exists():
-            return True
+        cookies_file.parent.mkdir(parents=True, exist_ok=True)
 
         import yt_dlp
-        # Use yt-dlp's own cookie extraction to create cookies.txt
         ydl_opts = {
             "quiet": True,
-            "cookiesfrombrowser": ("chrome",),
-            "remote_components": {"ejs:github"},
-            "cookiefile": str(cookies_file),  # yt-dlp will save cookies here
+            "no_warnings": True,
+            "cookiesfrombrowser": (browser,),
+            "cookiefile": str(cookies_file),
             "simulate": True,
+            "skip_download": True,
+            "extract_flat": True,
         }
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                # Just extract info from any video to trigger cookie export
-                ydl.extract_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ", download=False)
-            return cookies_file.exists()
-        except Exception:
-            return cookies_file.exists()
+                # Легкий запит до youtube.com щоб ініціалізувати cookie jar
+                ydl.extract_info("https://www.youtube.com/", download=False, process=False)
+        except Exception as e:
+            # extract_info може впасти через age-gate чи мережу — cookies все одно
+            # могли бути витягнуті під час ініціалізації YoutubeDL.
+            if not cookies_file.exists():
+                return False, f"Не вдалося витягти cookies з {browser}: {e}"
+
+        if not cookies_file.exists() or cookies_file.stat().st_size < 100:
+            return False, (
+                f"Cookies порожні. Переконайся що {browser} залогінений у youtube.com "
+                f"(відкрий браузер на хості, зайди на youtube.com, залогінься)."
+            )
+
+        # Перевірка чи є youtube auth cookies
+        content = cookies_file.read_text(errors="ignore")
+        auth_markers = ("__Secure-1PSID", "__Secure-3PSID", "LOGIN_INFO")
+        has_youtube_line = ".youtube.com" in content or "youtube.com" in content
+        if not has_youtube_line or not any(m in content for m in auth_markers):
+            # Видаляємо, щоб статус не казав "cookies активні" коли вони марні
+            try:
+                cookies_file.unlink()
+            except Exception:
+                pass
+            return False, (
+                f"У cookies немає YouTube auth. Відкрий Firefox на хості, "
+                f"зайди на youtube.com, залогінься, і натисни 'Авто з Firefox' знову."
+            )
+
+        size_kb = cookies_file.stat().st_size / 1024
+        return True, f"Cookies витягнуто з {browser} ({size_kb:.1f} KB)"
+
+    def ensure_cookies(self) -> bool:
+        """Legacy: підтримка старого API. Пробує Firefox."""
+        cookies_file = settings.storage_path / "cookies.txt"
+        if cookies_file.exists():
+            return True
+        success, _ = self.extract_cookies_from_browser("firefox")
+        return success
 
     def get_video_info(self, url: str) -> dict:
         """Отримати інформацію про відео без завантаження."""

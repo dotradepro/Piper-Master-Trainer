@@ -3,6 +3,7 @@ import asyncio
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.schemas.youtube import (
     AudioFileResponse,
@@ -141,22 +142,34 @@ async def delete_audio_file(audio_file_id: str, db: AsyncSession = Depends(get_d
 @router.post("/cookies")
 async def upload_cookies(file: UploadFile = File(...)):
     """Завантажити cookies.txt для доступу до захищених відео YouTube."""
-    if not file.filename.endswith(".txt"):
-        raise HTTPException(status_code=400, detail="Потрібен файл cookies.txt")
     content = await file.read()
+    # Netscape format starts with "# Netscape HTTP Cookie File" або "# HTTP Cookie File"
+    head = content[:200].decode("utf-8", errors="ignore").lstrip()
+    if not (file.filename.endswith(".txt") or head.startswith("#") and "Cookie" in head):
+        raise HTTPException(status_code=400, detail="Очікується cookies.txt у Netscape форматі")
     cookies_path = settings.storage_path / "cookies.txt"
     cookies_path.write_bytes(content)
-    return {"success": True, "message": "Cookies збережено"}
+    return {"success": True, "message": "Cookies збережено", "size_bytes": len(content)}
 
 
-@router.post("/cookies/refresh")
-async def refresh_cookies():
-    """Оновити cookies з Chrome браузера."""
+@router.delete("/cookies")
+async def delete_cookies():
+    """Видалити збережені cookies."""
+    cookies_path = settings.storage_path / "cookies.txt"
+    if cookies_path.exists():
+        cookies_path.unlink()
+        return {"success": True, "message": "Cookies видалено"}
+    return {"success": False, "message": "Cookies не знайдено"}
+
+
+@router.post("/cookies/extract")
+async def extract_cookies(browser: str = "firefox"):
+    """Автоматично витягти cookies з браузера (Firefox працює без D-Bus)."""
     service = YoutubeService()
-    success = await asyncio.to_thread(service.ensure_cookies)
+    success, message = await asyncio.to_thread(service.extract_cookies_from_browser, browser)
     if success:
-        return {"success": True, "message": "Cookies оновлено з Chrome"}
-    raise HTTPException(status_code=500, detail="Не вдалося оновити cookies. Переконайтесь що Chrome авторизований у YouTube.")
+        return {"success": True, "message": message}
+    raise HTTPException(status_code=400, detail=message)
 
 
 @router.get("/cookies/status")

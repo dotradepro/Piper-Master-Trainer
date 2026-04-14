@@ -8,7 +8,8 @@ services:
       - "8000:8000"
     volumes:
       - ./backend/storage:/app/storage
-      - ${HOME}/.config/google-chrome:/root/.config/google-chrome:ro
+      - /home/dotradepro/.config/google-chrome:/root/.config/google-chrome:ro
+      - /home/dotradepro/.mozilla/firefox:/root/.mozilla/firefox:ro
     depends_on:
       - redis
     environment:

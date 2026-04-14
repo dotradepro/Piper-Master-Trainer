@@ -24,6 +24,7 @@ frontend/.vite/
 # Storage
 backend/storage/projects/
 backend/storage/pretrained/
+backend/storage/cookies.txt
 
 # Database
 *.sqlite3

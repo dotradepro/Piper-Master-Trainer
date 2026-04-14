@@ -48,6 +48,21 @@ export const youtubeApi = {
 
   deleteFile: (audioFileId: string) =>
     api.delete(`/youtube/files/${audioFileId}`).then((r) => r.data),
+
+  cookiesStatus: () =>
+    api.get<{ has_cookies: boolean }>('/youtube/cookies/status').then((r) => r.data),
+
+  uploadCookies: (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post<{ success: boolean; size_bytes?: number }>('/youtube/cookies', form).then((r) => r.data)
+  },
+
+  deleteCookies: () =>
+    api.delete<{ success: boolean }>('/youtube/cookies').then((r) => r.data),
+
+  extractCookies: (browser: 'firefox' | 'chrome' = 'firefox') =>
+    api.post<{ success: boolean; message: string }>('/youtube/cookies/extract', null, { params: { browser } }).then((r) => r.data),
 }
 
 export function getAudioUrl(filePath: string): string {
